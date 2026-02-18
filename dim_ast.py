@@ -70,6 +70,32 @@ class ForStmt(Statement):
     body: List[Statement]
 
 @dataclass
+class StructDef(Statement):
+    name: str
+    fields: List[tuple] # (name, type)
+
+@dataclass
+class EnumDef(Statement):
+    name: str
+    variants: List[tuple] # (name, fields_or_none)
+
+@dataclass
+class TraitDef(Statement):
+    name: str
+    methods: List[FunctionDef]
+
+@dataclass
+class MatchArm(Node):
+    pattern: Expression # Simplified
+    condition: Optional[Expression]
+    body: List[Statement]
+
+@dataclass
+class MatchStmt(Statement):
+    expression: Expression
+    arms: List[MatchArm]
+
+@dataclass
 class PromptDef(Statement):
     name: str
     base: Optional[str]
