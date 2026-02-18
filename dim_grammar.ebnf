@@ -1,0 +1,41 @@
+# Dim Formal EBNF Grammar (v0.1)
+
+Dim uses a PEG-friendly grammar with indentation-sensitive parsing.
+
+```ebnf
+(* Top-level Structure *)
+program         = { statement | function_def | trait_def | struct_def | enum_def | prompt_def }
+
+(* Declarations *)
+function_def    = "fn" identifier [ generics ] "(" [ params ] ")" [ "->" type ] ":" block
+struct_def      = "struct" identifier [ generics ] ":" INDENT { field_def } DEDENT
+enum_def        = "enum" identifier [ generics ] ":" INDENT { variant_def } DEDENT
+trait_def       = "trait" identifier [ generics ] ":" INDENT { function_decl } DEDENT
+prompt_def      = "prompt" identifier [ "extends" identifier ] ":" INDENT { prompt_body } DEDENT
+
+(* AI/ML Specifics *)
+prompt_body     = role_def | "output" ":" type
+role_def        = "role" identifier ":" string_literal
+
+(* Statements *)
+statement       = let_stmt | assignment | if_stmt | match_stmt | loop_stmt | return_stmt | expr_stmt
+let_stmt        = "let" [ "mut" ] identifier [ ":" type ] "=" expression
+match_stmt      = "match" expression ":" INDENT { match_arm } DEDENT
+match_arm       = pattern [ "if" expression ] ":" block
+
+(* Expressions *)
+expression      = term { binary_op term } | primary
+primary         = identifier | literal | call | member_access | list_lit | tensor_lit | await_expr
+await_expr      = "await" expression
+tensor_lit      = "Tensor" "[" type "]" "." identifier "(" [ args ] ")"
+
+(* Types *)
+type            = identifier [ "[" type_list "]" ] | "&" [ "mut" ] type | "Tensor" "[" type [ "," shape ] "]"
+
+(* Whitespace/Indentation *)
+INDENT          = <increased indentation level>
+DEDENT          = <decreased indentation level>
+```
+
+> [!NOTE]
+> The grammar handles Python-style indentation through a pre-processing pass that injects `INDENT` and `DEDENT` tokens into the stream.
