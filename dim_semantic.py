@@ -1,111 +1,77 @@
-# Dim Semantic Analyzer (POC)
+# dim_semantic.py — Semantic Analyzer for Dim (v0.2)
+#
+# Updated to use the new type system (dim_types), structured Diagnostics,
+# Token dataclass, and span-annotated AST.
+# Orchestrates: name resolution → type checking → (future) MIR lowering
+
+from __future__ import annotations
+from typing import Dict, List, Optional
 
 from dim_ast import *
+from dim_types import Type, FunctionType, UNIT, UnknownType, resolve_builtin
+from dim_type_checker import TypeChecker, TypeEnv, Symbol
+from dim_diagnostic import DiagnosticBag
+
 
 class SemanticAnalyzer:
-    def __init__(self):
-        self.scopes = [{}] # Stack of symbol tables
+    """
+    Top-level semantic analysis pass.
+    Wraps the TypeChecker and exposes a simple analyze() interface.
+    After analysis, call .diag to inspect errors/warnings.
+    """
 
-    def enter_scope(self):
-        self.scopes.append({})
+    def __init__(self, source: str = "", filename: str = "<stdin>"):
+        self.source   = source
+        self.filename = filename
+        self.tc       = TypeChecker(source, filename)
+        self.diag     = self.tc.diag
 
-    def exit_scope(self):
-        self.scopes.pop()
+    def analyze(self, program: Program) -> bool:
+        """
+        Perform full semantic analysis on a Program node.
+        Returns True if there are no errors, False otherwise.
+        """
+        self.tc.check_program(program)
+        return not self.diag.has_errors
 
-    def define(self, name, type_info):
-        self.scopes[-1][name] = type_info
+    def report(self, color: bool = True) -> str:
+        """Return all collected diagnostics as a formatted string."""
+        import io, sys
+        buf = io.StringIO()
+        old = sys.stderr
+        sys.stderr = buf
+        self.diag.flush(color=color)
+        sys.stderr = old
+        return buf.getvalue()
 
-    def lookup(self, name):
-        for scope in reversed(self.scopes):
-            if name in scope:
-                return scope[name]
-        return None
 
-    def analyze(self, node):
-        if isinstance(node, Program):
-            for stmt in node.statements:
-                self.analyze(stmt)
-        elif isinstance(node, FunctionDef):
-            self.define(node.name, {"type": "function", "return": node.return_type})
-            self.enter_scope()
-            # Define parameters in the function scope
-            for param_name, param_type in node.params:
-                self.define(param_name, {"type": param_type})
-            for stmt in node.body:
-                self.analyze(stmt)
-            self.exit_scope()
-        elif isinstance(node, IfStmt):
-            self.analyze(node.condition)
-            self.enter_scope()
-            for stmt in node.then_branch:
-                self.analyze(stmt)
-            self.exit_scope()
-            if node.else_branch:
-                self.enter_scope()
-                for stmt in node.else_branch:
-                    self.analyze(stmt)
-                self.exit_scope()
-        elif isinstance(node, WhileStmt):
-            self.analyze(node.condition)
-            self.enter_scope()
-            for stmt in node.body:
-                self.analyze(stmt)
-            self.exit_scope()
-        elif isinstance(node, ForStmt):
-            self.enter_scope()
-            self.define(node.iterator, {"type": "unknown"}) # Iterator type depends on iterable
-            self.analyze(node.iterable)
-            for stmt in node.body:
-                self.analyze(stmt)
-            self.exit_scope()
-        elif isinstance(node, PromptDef):
-            self.define(node.name, {"type": "prompt"})
-        elif isinstance(node, LetStmt):
-            res = self.analyze(node.value)
-            self.define(node.name, {"type": res or "unknown"})
-        elif isinstance(node, ReturnStmt):
-            if node.value:
-                return self.analyze(node.value)
-        elif isinstance(node, Literal):
-            if isinstance(node.value, int): return "int"
-            if isinstance(node.value, float): return "float"
-            if isinstance(node.value, str): return "string"
-            if isinstance(node.value, bool): return "bool"
-        elif isinstance(node, Identifier):
-            info = self.lookup(node.name)
-            if info is None:
-                print(f"Error: Undefined variable '{node.name}'")
-            return info.get("type") if info else None
-        elif isinstance(node, BinaryOp):
-            lt = self.analyze(node.left)
-            rt = self.analyze(node.right)
-            if lt and rt and lt != rt:
-                print(f"Warning: Type mismatch in '{node.op}': {lt} and {rt}")
-            return lt
-        elif isinstance(node, Call):
-            self.analyze(node.callee)
-            for arg in node.args:
-                self.analyze(arg)
-            return "unknown" # Function return type lookup not fully implemented
-
-# POC Execution Integration
+# ── Example / smoke-test when run directly ────────────────────────────────────
 if __name__ == "__main__":
-    from dim_poc_lexer import Lexer
+    from dim_lexer import Lexer
     from dim_parser import Parser
-    code = """
+
+    CODE = """\
+fn add(x: i32, y: i32) -> i32:
+    return x + y
+
 fn main():
-    let x = 42
-    let y = "hello"
-    let z = x + y
-    if x > 10:
-        let internal = 5
-    let w = internal
+    let result = add(10, 20)
+    let mut counter = 0
+    counter = counter + 1
+    let bad = unknown_var
 """
-    lexer = Lexer(code)
+    print("=== Dim Semantic Analyzer v0.2 ===")
+    print(f"Source:\n{CODE}\n")
+
+    lexer  = Lexer(CODE, "test.dim")
     tokens = lexer.tokenize()
-    parser = Parser(tokens)
-    ast = parser.parse_program()
-    analyzer = SemanticAnalyzer()
-    print("--- Starting Semantic Analysis ---")
-    analyzer.analyze(ast)
-    print("--- Semantic Analysis Complete ---")
+
+    parser = Parser(tokens, CODE, "test.dim")
+    ast    = parser.parse_program()
+
+    sem = SemanticAnalyzer(CODE, "test.dim")
+    ok  = sem.analyze(ast)
+
+    print("=== Diagnostics ===")
+    sem.diag.flush(color=True)
+    print(f"\n=== Analysis {'PASSED' if ok else 'FAILED with errors'} ===")
