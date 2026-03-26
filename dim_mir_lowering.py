@@ -1,305 +1,442 @@
 # dim_mir_lowering.py — AST → MIR Lowering Pass
-#
-# Translates a type-checked, span-annotated AST into the MIR (Mid-Level IR).
-# This is the pass after type checking and before code generation / borrow checking.
-
-from __future__ import annotations
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any, Tuple
 from dim_ast import (
-    Program, Statement, Expression,
-    FunctionDef, LetStmt, AssignStmt, ReturnStmt,
-    IfStmt, WhileStmt, ForStmt, ExprStmt,
-    Literal, Identifier, BinaryOp, UnaryOp, Call, MethodCall,
-    BorrowExpr, DerefExpr, AwaitExpr, ListLiteral,
-    MatchStmt, Param,
+    Program,
+    Statement,
+    Expression,
+    FunctionDef,
+    LetStmt,
+    AssignStmt,
+    ReturnStmt,
+    IfStmt,
+    WhileStmt,
+    ForStmt,
+    ExprStmt,
+    MatchStmt,
+    Literal,
+    Identifier,
+    BinaryOp,
+    UnaryOp,
+    Call,
+    MethodCall,
+    BorrowExpr,
+    DerefExpr,
+    AwaitExpr,
+    ListLiteral,
+    Param,
+    TensorExpr,
+    ModelCall,
 )
 from dim_types import (
-    Type, UNIT, I32, STR, BOOL, FutureType, UnknownType,
+    Type,
+    UNIT,
+    I32,
+    STR,
+    BOOL,
+    FutureType,
+    UnknownType,
     FunctionType,
+    PromptType,
+    GenericType,
+    TensorType,
 )
 from dim_mir import (
-    Local, Place, Mutability, BorrowKind,
-    BasicBlock, MIRFunction, MIRModule,
-    Assign, StorageLive, StorageDead, Borrow, Drop,
-    Goto, Branch, Return, Call as MIRCall,
-    ConstOperand, PlaceOperand, BorrowOperand,
-    UseRValue, BinOpRValue, UnOpRValue,
+    Local,
+    Place,
+    BasicBlock,
+    MIRFunction,
+    MIRModule,
+    Assign,
+    StorageLive,
+    StorageDead,
+    Goto,
+    Branch,
+    Return,
+    Call as MIRCall,
+    PromptCall,
+    ConstOperand,
+    PlaceOperand,
+    UseRValue,
+    BinOpRValue,
+    UnOpRValue,
+    TensorRValue,
+    Borrow,
+    Drop,
+    Mutability,
+    BorrowKind,
 )
 
 
-class MIRLowering:
-    """
-    Lowers a typed AST FunctionDef into a MIRFunction.
-    Typical usage:
-        lowering = MIRLowering(type_ctx)
-        mir_fn   = lowering.lower_function(fn_def)
-    """
-
+class LoweringPass:
     def __init__(self):
-        self._local_ctr = 0
-        self._block_ctr = 0
-        self._blocks: List[BasicBlock] = []
-        self._current: Optional[BasicBlock] = None
-        self._locals: Dict[str, Local] = {}   # name → Local
-        self._all_locals: Dict[int, Local] = {}
+        self.functions = []
+        self.current_fn: Optional[MIRFunction] = None
+        self.local_map: Dict[str, Local] = {}
+        self.block_counter = 0
+        self.temp_counter = 0
 
-    def _fresh_local(self, ty: Type, name: Optional[str] = None,
-                     mut: Mutability = Mutability.Not) -> Local:
-        l = Local(self._local_ctr, ty, mut, name)
-        self._all_locals[l.index] = l
-        self._local_ctr += 1
-        return l
-
-    def _new_block(self) -> BasicBlock:
-        bb = BasicBlock(self._block_ctr)
-        self._block_ctr += 1
-        self._blocks.append(bb)
-        return bb
-
-    def _emit(self, stmt):
-        if self._current:
-            self._current.stmts.append(stmt)
-
-    def _set_terminator(self, term):
-        if self._current and self._current.terminator is None:
-            self._current.terminator = term
-
-    # ── Entry-point ───────────────────────────────────────────────────────────
+    def lower(self, prog):
+        module = MIRModule("main")
+        for s in prog.statements:
+            if isinstance(s, FunctionDef):
+                self.functions.append(self.lower_function(s))
+        module.functions = self.functions
+        return module
 
     def lower_function(self, fn: FunctionDef) -> MIRFunction:
-        self._local_ctr = 0
-        self._block_ctr = 0
-        self._blocks    = []
-        self._locals    = {}
-        self._all_locals = {}
+        from dim_types import TypeVar
 
-        entry = self._new_block()
-        self._current = entry
+        ret_ty = fn.resolved_fn_type.return_type
+        if isinstance(ret_ty, TypeVar):
+            ret_ty = UNIT
+        mir_fn = MIRFunction(fn.name, [], ret_ty)
+        self.current_fn = mir_fn
+        self.local_map = {}
+        self.block_counter = 0
+        self.temp_counter = 0
 
-        # Allocate locals for parameters
+        bb0 = BasicBlock(0)
+        mir_fn.blocks.append(bb0)
+
         params: List[Local] = []
         for p in fn.params:
-            ty  = p.type_ann if p.type_ann else UnknownType()
-            mut = Mutability.Mut if p.is_mut else Mutability.Not
-            loc = self._fresh_local(ty, p.name, mut)
-            self._locals[p.name] = loc
+            ty = p.type_ann or I32
+            loc = Local(
+                len(mir_fn.locals),
+                p.name,
+                ty,
+                Mutability.Mut if p.is_mut else Mutability.Not,
+            )
+            mir_fn.locals.append(loc)
+            mir_fn.locals_map[loc.index] = loc
+            self.local_map[p.name] = loc
             params.append(loc)
-            self._emit(StorageLive(loc))
+            bb0.stmts.append(StorageLive(loc))
 
-        # Lower body
-        for stmt in fn.body:
-            self._lower_stmt(stmt)
+        mir_fn.params = params
 
-        # Ensure all blocks have terminators
-        for bb in self._blocks:
-            if bb.terminator is None:
-                bb.terminator = Return(None)
+        current_bb = bb0
+        pending_cont: Optional[BasicBlock] = None
+        for s in fn.body:
+            if pending_cont is not None:
+                current_bb = pending_cont
+                pending_cont = None
+            elif current_bb.terminator is not None:
+                current_bb = self._new_block()
+                mir_fn.blocks.append(current_bb)
+            pending_cont = self.lower_stmt(s, current_bb, mir_fn)
+            if pending_cont is not None and pending_cont not in mir_fn.blocks:
+                mir_fn.blocks.append(pending_cont)
 
-        ret_ty = fn.return_type if fn.return_type else UNIT
-        return MIRFunction(
-            name=fn.name,
-            params=params,
-            return_type=ret_ty,
-            locals=self._all_locals,
-            blocks=self._blocks,
-            is_async=fn.is_async,
+        if current_bb.terminator is None:
+            current_bb.terminator = Return(ConstOperand(UNIT, None))
+        if pending_cont is not None and pending_cont not in mir_fn.blocks:
+            mir_fn.blocks.append(pending_cont)
+        elif current_bb not in mir_fn.blocks:
+            mir_fn.blocks.append(current_bb)
+
+        return mir_fn
+
+    def _new_block(self) -> BasicBlock:
+        bb = BasicBlock(self.block_counter)
+        self.block_counter += 1
+        return bb
+
+    def _new_temp(self, ty: Type) -> Local:
+        mir_fn = self.current_fn
+        loc = Local(len(mir_fn.locals), f"_t{self.temp_counter}", ty)
+        self.temp_counter += 1
+        mir_fn.locals.append(loc)
+        mir_fn.locals_map[loc.index] = loc
+        return loc
+
+    def lower_stmt(
+        self, stmt: Statement, bb: BasicBlock, mir_fn: MIRFunction
+    ) -> Tuple[Optional[BasicBlock], bool]:
+        from dim_ast import (
+            Identifier,
+            AssignStmt,
+            IfStmt,
+            WhileStmt,
+            ForStmt,
+            ReturnStmt,
+            BreakStmt,
+            ContinueStmt,
+            MatchStmt,
+            ExprStmt,
         )
 
-    # ── Statement lowering ────────────────────────────────────────────────────
+        cont: Optional[BasicBlock] = None
+        from dim_ast import (
+            Identifier,
+            AssignStmt,
+            IfStmt,
+            WhileStmt,
+            ForStmt,
+            ReturnStmt,
+            BreakStmt,
+            ContinueStmt,
+            MatchStmt,
+            ExprStmt,
+        )
 
-    def _lower_stmt(self, stmt: Statement):
         if isinstance(stmt, LetStmt):
-            ty  = stmt.value.resolved_type or UnknownType()
-            mut = Mutability.Mut if stmt.is_mut else Mutability.Not
-            loc = self._fresh_local(ty, stmt.name, mut)
-            self._locals[stmt.name] = loc
-            self._emit(StorageLive(loc))
-            rval = self._lower_expr_as_rvalue(stmt.value)
-            self._emit(Assign(Place(loc, ty=ty), rval))
+            ty = (
+                stmt.value.resolved_type
+                if hasattr(stmt.value, "resolved_type")
+                else I32
+            )
+            loc = Local(
+                len(mir_fn.locals),
+                stmt.name,
+                ty,
+                Mutability.Mut if stmt.is_mut else Mutability.Not,
+            )
+            mir_fn.locals.append(loc)
+            mir_fn.locals_map[loc.index] = loc
+            self.local_map[stmt.name] = loc
+            bb.stmts.append(StorageLive(loc))
+            if isinstance(stmt.value, Call):
+                args_ops = []
+                for a in stmt.value.args:
+                    a_mir, _ = self.lower_expr(a, bb)
+                    args_ops.append(self._to_operand(a_mir, bb))
+                fn_name = (
+                    stmt.value.callee.name
+                    if isinstance(stmt.value.callee, Identifier)
+                    else "__dim_unknown_fn"
+                )
+                next_bb = self._new_block()
+                bb.terminator = MIRCall(fn_name, args_ops, Place(loc), next_bb)
+                cont = next_bb
+            else:
+                val, _ = self.lower_expr(stmt.value, bb)
+                rval = val if val else UseRValue(ConstOperand(ty, None))
+                bb.stmts.append(Assign(Place(loc), rval))
 
         elif isinstance(stmt, AssignStmt):
-            dest = self._lower_place(stmt.target)
-            rval = self._lower_expr_as_rvalue(stmt.value)
-            if dest:
-                self._emit(Assign(dest, rval))
+            val, _ = self.lower_expr(stmt.value, bb)
+            if isinstance(stmt.target, Identifier):
+                loc = self.local_map.get(stmt.target.name)
+                if loc:
+                    rval = val if val else UseRValue(ConstOperand(loc.ty, None))
+                    bb.stmts.append(Assign(Place(loc), rval))
 
         elif isinstance(stmt, ReturnStmt):
-            if stmt.value:
-                op = self._lower_expr_as_operand(stmt.value)
-            else:
-                op = ConstOperand(None, UNIT)
-            self._set_terminator(Return(op))
-            # Open a new (unreachable) block for any following statements
-            dead = self._new_block()
-            self._current = dead
-
-        elif isinstance(stmt, IfStmt):
-            self._lower_if(stmt)
-
-        elif isinstance(stmt, WhileStmt):
-            self._lower_while(stmt)
-
-        elif isinstance(stmt, ForStmt):
-            self._lower_for(stmt)
+            val, _ = self.lower_expr(stmt.value, bb) if stmt.value else (None, None)
+            bb.terminator = Return(self._to_operand(val, bb))
 
         elif isinstance(stmt, ExprStmt):
-            self._lower_expr_as_rvalue(stmt.expr)
+            _, next_bb = self.lower_expr(stmt.expr, bb)
+            if next_bb is not None:
+                cont = next_bb
 
-    def _lower_if(self, stmt: IfStmt):
-        cond_op  = self._lower_expr_as_operand(stmt.condition)
-        then_bb  = self._new_block()
-        merge_bb = self._new_block()
-        else_bb  = self._new_block() if stmt.else_branch else merge_bb
+        elif isinstance(stmt, IfStmt):
+            cond, _ = self.lower_expr(stmt.condition, bb)
+            cond_op = self._to_operand(cond, bb)
 
-        self._set_terminator(Branch(cond_op, then_bb.id, else_bb.id))
+            then_bb = self._new_block()
+            else_bb = (
+                self._new_block() if stmt.else_branch or stmt.elif_branches else None
+            )
+            merge_bb = self._new_block()
 
-        # Then branch
-        self._current = then_bb
-        for s in stmt.then_branch:
-            self._lower_stmt(s)
-        self._set_terminator(Goto(merge_bb.id))
+            bb.terminator = Branch(
+                cond_op,
+                true_target=then_bb.id,
+                false_target=else_bb.id if else_bb else merge_bb.id,
+            )
 
-        # Else branch
-        if stmt.else_branch:
-            self._current = else_bb
-            for s in stmt.else_branch:
-                self._lower_stmt(s)
-            self._set_terminator(Goto(merge_bb.id))
+            mir_fn.blocks.append(then_bb)
+            for s in stmt.then_branch:
+                self.lower_stmt(s, then_bb, mir_fn)
+            if then_bb.terminator is None:
+                then_bb.terminator = Goto(merge_bb.id)
 
-        self._current = merge_bb
+            if else_bb:
+                mir_fn.blocks.append(else_bb)
+                for s in stmt.else_branch or []:
+                    self.lower_stmt(s, else_bb, mir_fn)
+                if else_bb.terminator is None:
+                    else_bb.terminator = Goto(merge_bb.id)
 
-    def _lower_while(self, stmt: WhileStmt):
-        header_bb = self._new_block()
-        body_bb   = self._new_block()
-        exit_bb   = self._new_block()
+            mir_fn.blocks.append(merge_bb)
 
-        self._set_terminator(Goto(header_bb.id))
+        elif isinstance(stmt, WhileStmt):
+            cond_bb = self._new_block()
+            body_bb = self._new_block()
+            merge_bb = self._new_block()
 
-        # Header: evaluate condition
-        self._current = header_bb
-        cond_op = self._lower_expr_as_operand(stmt.condition)
-        self._set_terminator(Branch(cond_op, body_bb.id, exit_bb.id))
+            bb.terminator = Goto(cond_bb.id)
 
-        # Body
-        self._current = body_bb
-        for s in stmt.body:
-            self._lower_stmt(s)
-        self._set_terminator(Goto(header_bb.id))
+            cond, _ = self.lower_expr(stmt.condition, cond_bb)
+            cond_bb.terminator = Branch(
+                self._to_operand(cond, cond_bb),
+                true_target=body_bb.id,
+                false_target=merge_bb.id,
+            )
 
-        self._current = exit_bb
+            mir_fn.blocks.append(cond_bb)
+            mir_fn.blocks.append(body_bb)
+            for s in stmt.body:
+                self.lower_stmt(s, body_bb, mir_fn)
+            if body_bb.terminator is None:
+                body_bb.terminator = Goto(cond_bb.id)
 
-    def _lower_for(self, stmt: ForStmt):
-        # Desugar: for x in iter → let __iter = iter; while let Some(x) = __iter.next()
-        iter_ty  = stmt.iterable.resolved_type or UnknownType()
-        iter_loc = self._fresh_local(iter_ty, "__iter")
-        self._emit(StorageLive(iter_loc))
-        iter_op  = self._lower_expr_as_operand(stmt.iterable)
-        self._emit(Assign(Place(iter_loc, ty=iter_ty), UseRValue(iter_op)))
+            mir_fn.blocks.append(merge_bb)
 
-        header_bb = self._new_block()
-        body_bb   = self._new_block()
-        exit_bb   = self._new_block()
-        self._set_terminator(Goto(header_bb.id))
+        elif isinstance(stmt, ForStmt):
+            iter_val, _ = self.lower_expr(stmt.iterable, bb)
+            iter_loc = self._new_temp(I32)
+            bb.stmts.append(StorageLive(iter_loc))
+            bb.stmts.append(Assign(Place(iter_loc), iter_val))
 
-        # Simplified: just loop the body (full next()/Option unwrap in Phase 2)
-        self._current = header_bb
-        self._set_terminator(Goto(body_bb.id))   # placeholder
+            body_bb = self._new_block()
+            merge_bb = self._new_block()
 
-        self._current = body_bb
-        # Bind iterator variable
-        elem_loc = self._fresh_local(UnknownType(), stmt.iterator)
-        self._locals[stmt.iterator] = elem_loc
-        self._emit(StorageLive(elem_loc))
-        for s in stmt.body:
-            self._lower_stmt(s)
-        self._set_terminator(Goto(header_bb.id))   # loop back
+            self.local_map[stmt.iterator] = iter_loc
+            mir_fn.locals.append(iter_loc)
+            mir_fn.locals_map[iter_loc.index] = iter_loc
 
-        self._current = exit_bb
+            bb.terminator = Goto(body_bb.id)
+            mir_fn.blocks.append(body_bb)
 
-    # ── Expression lowering ───────────────────────────────────────────────────
+            for s in stmt.body:
+                self.lower_stmt(s, body_bb, mir_fn)
+            if body_bb.terminator is None:
+                body_bb.terminator = Goto(merge_bb.id)
 
-    def _lower_expr_as_rvalue(self, expr: Expression):
-        """Lower an expression into an RValue (for use on RHS of Assign)."""
-        op = self._lower_expr_as_operand(expr)
-        return UseRValue(op)
+            mir_fn.blocks.append(merge_bb)
 
-    def _lower_expr_as_operand(self, expr: Expression):
-        """Lower an expression into an Operand."""
-        ty = expr.resolved_type or UnknownType()
+        elif isinstance(stmt, BreakStmt):
+            bb.terminator = Goto(mir_fn.blocks[-1].id)
+
+        elif isinstance(stmt, ContinueStmt):
+            bb.terminator = Goto(bb.id)
+
+        elif isinstance(stmt, MatchStmt):
+            merge_bb = self._new_block()
+            for arm in stmt.arms:
+                arm_bb = self._new_block()
+                mir_fn.blocks.append(arm_bb)
+                for s in arm.body:
+                    self.lower_stmt(s, arm_bb, mir_fn)
+                if arm_bb.terminator is None:
+                    arm_bb.terminator = Goto(merge_bb.id)
+            mir_fn.blocks.append(merge_bb)
+
+        return cont
+
+    def lower_expr(
+        self, expr: Expression, bb: BasicBlock
+    ) -> Tuple[Any, Optional[BasicBlock]]:
+        from dim_ast import (
+            Literal,
+            Identifier,
+            BinaryOp,
+            UnaryOp,
+            Call,
+            MethodCall,
+            BorrowExpr,
+            DerefExpr,
+            AwaitExpr,
+            ListLiteral,
+            TensorExpr,
+        )
 
         if isinstance(expr, Literal):
-            return ConstOperand(expr.value, ty)
+            return UseRValue(ConstOperand(expr.resolved_type or I32, expr.value)), None
 
         if isinstance(expr, Identifier):
-            loc = self._locals.get(expr.name)
+            loc = self.local_map.get(expr.name)
             if loc:
-                return PlaceOperand(Place(loc, ty=ty))
-            # Treat unknown identifiers as constants (error will be in type checker)
-            dummy = self._fresh_local(ty, expr.name)
-            return PlaceOperand(Place(dummy, ty=ty))
+                return UseRValue(PlaceOperand(Place(loc))), None
+            return UseRValue(ConstOperand(UnknownType(), None)), None
 
         if isinstance(expr, BinaryOp):
-            left  = self._lower_expr_as_operand(expr.left)
-            right = self._lower_expr_as_operand(expr.right)
-            dest  = self._fresh_local(ty)
-            self._emit(StorageLive(dest))
-            self._emit(Assign(Place(dest, ty=ty),
-                               BinOpRValue(expr.op, left, right)))
-            return PlaceOperand(Place(dest, ty=ty))
+            l, _ = self.lower_expr(expr.left, bb)
+            r, _ = self.lower_expr(expr.right, bb)
+            lop = self._to_operand(l, bb)
+            rop = self._to_operand(r, bb)
+            lop.ty = (
+                expr.left.resolved_type if hasattr(expr.left, "resolved_type") else I32
+            )
+            rop.ty = (
+                expr.right.resolved_type
+                if hasattr(expr.right, "resolved_type")
+                else I32
+            )
+            return BinOpRValue(lop, expr.op, rop), None
 
         if isinstance(expr, UnaryOp):
-            operand = self._lower_expr_as_operand(expr.operand)
-            dest    = self._fresh_local(ty)
-            self._emit(StorageLive(dest))
-            self._emit(Assign(Place(dest, ty=ty),
-                               UnOpRValue(expr.op, operand)))
-            return PlaceOperand(Place(dest, ty=ty))
-
-        if isinstance(expr, BorrowExpr):
-            inner_place = self._lower_place(expr.expr)
-            dest  = self._fresh_local(ty)
-            kind  = BorrowKind.Mutable if expr.mutable else BorrowKind.Shared
-            if inner_place:
-                self._emit(Borrow(dest, kind, inner_place))
-            return BorrowOperand(kind, Place(dest, ty=ty))
+            operand, _ = self.lower_expr(expr.operand, bb)
+            return UnOpRValue(expr.op, self._to_operand(operand, bb)), None
 
         if isinstance(expr, Call):
-            callee = self._lower_expr_as_operand(expr.callee)
-            args   = [self._lower_expr_as_operand(a) for a in expr.args]
-            dest   = self._fresh_local(ty)
-            next_bb = self._new_block()
-            self._emit(StorageLive(dest))
-            self._set_terminator(MIRCall(callee, args,
-                                          Place(dest, ty=ty), next_bb.id))
-            self._current = next_bb
-            return PlaceOperand(Place(dest, ty=ty))
+            return Place(self._new_temp(expr.resolved_type or I32)), None
 
-        # Fallback: materialise into a temp local
-        dest = self._fresh_local(ty)
-        self._emit(StorageLive(dest))
-        return PlaceOperand(Place(dest, ty=ty))
+        if isinstance(expr, MethodCall) and expr.method == "execute":
+            val, next_bb = self.lower_model_execute(expr, bb)
+            return val, next_bb
 
-    def _lower_place(self, expr: Expression) -> Optional[Place]:
-        """Lower an expression to a writable Place (for LHS of assignment)."""
-        if isinstance(expr, Identifier):
-            loc = self._locals.get(expr.name)
+        if isinstance(expr, BorrowExpr):
+            loc = (
+                self.local_map.get(
+                    expr.expr.name if isinstance(expr.expr, Identifier) else None
+                )
+                if isinstance(expr.expr, Identifier)
+                else None
+            )
             if loc:
-                return Place(loc, ty=loc.ty)
-        if isinstance(expr, DerefExpr):
-            inner = self._lower_place(expr.expr)
-            return inner  # simplified
-        return None
+                bk = BorrowKind.Mutable if expr.mutable else BorrowKind.Shared
+                temp = self._new_temp(loc.ty)
+                bb.stmts.append(StorageLive(temp))
+                bb.stmts.append(Borrow(Place(temp), bk, Place(loc)))
+                return UseRValue(PlaceOperand(Place(temp))), None
 
+        if isinstance(expr, TensorExpr):
+            return TensorRValue(
+                expr.resolved_type.dtype
+                if hasattr(expr.resolved_type, "dtype")
+                else F32,
+                expr.shape,
+            ), None
 
-# ── Module-level lowering ──────────────────────────────────────────────────────
+        return UseRValue(ConstOperand(I32, 0)), None
+
+    def lower_model_execute(self, expr, bb):
+        prompt_arg = expr.args[0] if expr.args else None
+        if prompt_arg:
+            input_mir, _ = self.lower_expr(prompt_arg, bb)
+            temp_loc = self._new_temp(expr.resolved_type or UnknownType())
+            bb.stmts.append(StorageLive(temp_loc))
+            next_bb = self._new_block()
+            bb.terminator = PromptCall(
+                prompt_ref=getattr(prompt_arg.resolved_type, "name", "Prompt"),
+                input=self._to_operand(input_mir, bb),
+                dest=Place(temp_loc),
+                next_block=next_bb,
+            )
+            return UseRValue(PlaceOperand(Place(temp_loc))), next_bb
+        return UseRValue(ConstOperand(UnknownType(), None)), None
+
+    def _to_operand(self, rval, bb) -> Any:
+        if rval is None:
+            return ConstOperand(I32, None)
+        if isinstance(rval, Place):
+            return PlaceOperand(rval)
+        if isinstance(rval, UseRValue):
+            return rval.operand
+        if isinstance(rval, BinOpRValue):
+            temp = self._new_temp(I32)
+            bb.stmts.append(Assign(Place(temp), rval))
+            return PlaceOperand(Place(temp))
+        if isinstance(rval, TensorRValue):
+            temp = self._new_temp(I32)
+            bb.stmts.append(Assign(Place(temp), rval))
+            return PlaceOperand(Place(temp))
+        return ConstOperand(I32, None)
+
 
 def lower_program(prog: Program) -> MIRModule:
-    """Lower all top-level functions in a Program into a MIRModule."""
-    module = MIRModule(name="module")
-    from dim_ast import FunctionDef
-    for stmt in prog.statements:
-        if isinstance(stmt, FunctionDef):
-            lowering = MIRLowering()
-            mir_fn   = lowering.lower_function(stmt)
-            module.functions.append(mir_fn)
-    return module
+    return LoweringPass().lower(prog)

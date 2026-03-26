@@ -3,7 +3,6 @@
 # Unified command-line driver for the Dim compiler.
 # Usage:  python dim_cli.py <command> [options] [file]
 
-from __future__ import annotations
 import sys
 import os
 import argparse
@@ -21,8 +20,9 @@ def _load_file(path: str) -> str:
 def cmd_lex(args):
     """Tokenise a .dim file and print all tokens."""
     from dim_lexer import Lexer
+
     source = _load_file(args.file)
-    lexer  = Lexer(source, args.file)
+    lexer = Lexer(source, args.file)
     tokens = lexer.tokenize()
     for tok in tokens:
         print(tok)
@@ -33,10 +33,11 @@ def cmd_parse(args):
     """Parse a .dim file and print the AST."""
     from dim_lexer import Lexer
     from dim_parser import Parser
+
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
-    ast    = parser.parse_program()
+    ast = parser.parse_program()
     _print_ast(ast, indent=0)
     parser.diag.flush(color=not args.no_color)
 
@@ -46,19 +47,20 @@ def cmd_check(args):
     from dim_lexer import Lexer
     from dim_parser import Parser
     from dim_semantic import SemanticAnalyzer
+
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
-    ast    = parser.parse_program()
+    ast = parser.parse_program()
     if parser.diag.has_errors:
         parser.diag.flush(color=not args.no_color)
         sys.exit(1)
     sem = SemanticAnalyzer(source, args.file)
-    ok  = sem.analyze(ast)
-    sem.diag.flush(color=not args.no_color)
-    if not ok:
+    ok = sem.analyze(ast)
+    if sem.diag.has_errors:
+        sem.diag.flush(color=not args.no_color)
         sys.exit(1)
-    print("✓ Type checking passed.")
+    print("[PASS] Type checking passed.")
 
 
 def cmd_mir(args):
@@ -67,11 +69,12 @@ def cmd_mir(args):
     from dim_parser import Parser
     from dim_semantic import SemanticAnalyzer
     from dim_mir_lowering import lower_program
+
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
-    ast    = parser.parse_program()
-    sem    = SemanticAnalyzer(source, args.file)
+    ast = parser.parse_program()
+    sem = SemanticAnalyzer(source, args.file)
     sem.analyze(ast)
     sem.diag.flush(color=not args.no_color)
     module = lower_program(ast)
@@ -87,11 +90,12 @@ def cmd_borrow(args):
     from dim_mir_lowering import lower_program
     from dim_borrow_checker import BorrowChecker
     from dim_diagnostic import DiagnosticBag
+
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
-    ast    = parser.parse_program()
-    sem    = SemanticAnalyzer(source, args.file)
+    ast = parser.parse_program()
+    sem = SemanticAnalyzer(source, args.file)
     sem.analyze(ast)
     if sem.diag.has_errors:
         sem.diag.flush(color=not args.no_color)
@@ -106,7 +110,7 @@ def cmd_borrow(args):
         if diag.has_errors:
             all_ok = False
     if all_ok:
-        print("✓ Borrow check passed.")
+        print("[PASS] Borrow check passed.")
     else:
         sys.exit(1)
 
@@ -124,14 +128,14 @@ def cmd_build(args):
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
-    ast    = parser.parse_program()
+    ast = parser.parse_program()
     if parser.diag.has_errors:
         parser.diag.flush(color=not args.no_color)
         sys.exit(1)
 
     print("[2/4] Type checking...")
     sem = SemanticAnalyzer(source, args.file)
-    ok  = sem.analyze(ast)
+    ok = sem.analyze(ast)
     sem.diag.flush(color=not args.no_color)
     if not ok:
         sys.exit(1)
@@ -151,24 +155,29 @@ def cmd_build(args):
     if not all_ok:
         sys.exit(1)
 
-    print(f"\n✓ Build succeeded for {args.file}")
+    print("\n[PASS] Build succeeded for " + args.file)
     print("  (Code generation / native binary output: coming in Phase 3)")
 
 
 def cmd_test(args):
     """Run the built-in test suite."""
     import dim_tests
+
     tag = getattr(args, "tag", None)
-    ok  = dim_tests.run_tests(filter_tag=tag)
+    ok = dim_tests.run_tests(filter_tag=tag)
     sys.exit(0 if ok else 1)
 
 
 def _print_ast(node, indent: int = 0):
     from dim_ast import Node
+
     prefix = "  " * indent
-    name   = type(node).__name__
-    fields = {k: v for k, v in vars(node).items()
-              if k not in ("span", "resolved_type", "resolved_fn_type")}
+    name = type(node).__name__
+    fields = {
+        k: v
+        for k, v in vars(node).items()
+        if k not in ("span", "resolved_type", "resolved_fn_type")
+    }
     print(f"{prefix}{name}")
     for key, val in fields.items():
         if isinstance(val, Node):
@@ -191,8 +200,10 @@ def main():
         prog="dim",
         description="Dim Programming Language Compiler (v0.2)",
     )
-    parser.add_argument("--no-color", action="store_true", help="Disable ANSI color output")
-    sub = parser.add_subparsers(dest="command", required=True)
+    parser.add_argument(
+        "--no-color", action="store_true", help="Disable ANSI color output"
+    )
+    sub = parser.add_subparsers(dest="command")
 
     # lex
     p_lex = sub.add_parser("lex", help="Tokenise a .dim file")
@@ -230,6 +241,9 @@ def main():
     p_test.set_defaults(func=cmd_test)
 
     args = parser.parse_args()
+    if not args.command:
+        parser.print_help()
+        sys.exit(1)
     args.func(args)
 
 

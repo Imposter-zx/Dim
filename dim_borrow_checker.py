@@ -7,7 +7,6 @@
 #   3. Check loan invalidation at mutation/move points
 #   4. Check loans don't outlive their owners
 
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import Dict, List, Optional, Set, Tuple

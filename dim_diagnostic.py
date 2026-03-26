@@ -3,7 +3,6 @@
 # Replaces bare print() error calls with a proper Diagnostic pipeline that
 # carries severity, error codes, source spans, hints, and pretty-printing.
 
-from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import List, Optional
