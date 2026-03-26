@@ -2,7 +2,7 @@
 
 **Dim** is a next-generation, statically-compiled programming language designed to bridge ergonomic developer experience with systems-level control — with **AI/ML**, **memory safety**, and **security** as first-class language features.
 
-> **Status:** Phase 1 Foundation (compiler frontend + MIR + borrow checker)
+> **Status:** Phase 2 Foundation (compiler frontend + MIR + borrow checker + LLVM codegen)
 
 ---
 
@@ -19,10 +19,11 @@
 | Mid-Level IR (MIR / CFG)    | ✅ (`dim_mir.py`)                              |
 | AST → MIR Lowering          | ✅ (`dim_mir_lowering.py`)                     |
 | Borrow Checker (MIR-level)  | ✅ Polonius-inspired (`dim_borrow_checker.py`) |
+| LLVM IR Codegen             | ✅ (`dim_mir_to_llvm.py`)                      |
 | First-class `prompt` type   | ✅ AST + type system                           |
 | `actor` / message-passing   | ✅ AST + parser                                |
-| Test Suite                  | ✅ 30 tests (`dim_tests.py`)                   |
-| LLVM Codegen                | 🔜 Phase 3                                     |
+| `@tool` decorator           | ✅ Parser + semantic analysis                   |
+| Test Suite                  | ✅ 35 tests (`dim_tests.py`)                   |
 | Native binaries + WASM      | 🔜 Phase 3                                     |
 | Async runtime               | 🔜 Phase 4                                     |
 | Package manager             | 🔜 Phase 7                                     |
@@ -87,7 +88,7 @@ Source (.dim)
     ↓  dim_type_checker.py   — HM type inference, scope resolution
     ↓  dim_mir_lowering.py   — AST → MIR (SSA Control Flow Graph)
     ↓  dim_borrow_checker.py — Ownership & borrow validation (Polonius)
-    ↓  (Phase 3) LLVM IR     — Native x86_64 / ARM64 / WASM output
+    ↓  dim_mir_to_llvm.py    — MIR → LLVM IR (x86_64)
 ```
 
 ---
@@ -126,6 +127,24 @@ dim_ast.py             — Span-annotated AST node definitions
 dim_parser.py          — Recursive descent + Pratt expression parser
 dim_types.py           — Algebraic type system (primitives, generics, tensors, prompts)
 dim_type_checker.py    — Hindley-Milner type inference engine
+dim_diagnostic.py       — Structured error/warning system with source highlighting
+dim_mir.py             — Mid-Level IR: SSA locals, BasicBlocks, CFG algorithms
+dim_mir_lowering.py    — AST → MIR lowering pass
+dim_mir_to_llvm.py     — MIR → LLVM IR codegen (x86_64)
+dim_borrow_checker.py  — Ownership & borrow checking (Polonius-inspired)
+dim_semantic.py        — Top-level semantic analysis orchestrator
+dim_cli.py             — Unified compiler CLI
+dim_tests.py           — Test suite (35 test cases)
+dim_grammar.ebnf       — Formal EBNF grammar specification
+dim_specification.md   — Full language technical specification
+test.dim               — Sample Dim source file
+```
+dim_token.py           — Token dataclass + Span source locations
+dim_lexer.py           — Production lexer (replaces dim_poc_lexer.py)
+dim_ast.py             — Span-annotated AST node definitions
+dim_parser.py          — Recursive descent + Pratt expression parser
+dim_types.py           — Algebraic type system (primitives, generics, tensors, prompts)
+dim_type_checker.py    — Hindley-Milner type inference engine
 dim_diagnostic.py      — Structured error/warning system with source highlighting
 dim_mir.py             — Mid-Level IR: SSA locals, BasicBlocks, CFG algorithms
 dim_mir_lowering.py    — AST → MIR lowering pass
@@ -144,9 +163,9 @@ dim_specification.md   — Full language technical specification
 | Phase | Milestone                                                | Target                 |
 | ----- | -------------------------------------------------------- | ---------------------- |
 | 0     | Lexer, Parser, AST prototype                             | ✅ Done                |
-| 1     | Types, MIR, Borrow Checker, Diagnostics                  | ✅ Done (this release) |
-| 2     | Full type generics, trait dispatch, pattern matching     | Q2 2026                |
-| 3     | LLVM IR codegen, native binaries, WASM                   | Q4 2026                |
+| 1     | Types, MIR, Borrow Checker, Diagnostics                  | ✅ Done                |
+| 2     | LLVM IR codegen, function calls, @tool parsing           | ✅ Done (this release) |
+| 3     | Native binaries, WASM, full LLVM backend                  | Q4 2026                |
 | 4     | Async runtime, actor scheduler                           | Q1 2027                |
 | 5     | AI/LLM engine (typed prompts, model adapters)            | Q2 2027                |
 | 6     | Security: taint analysis, capability model, Z3 contracts | Q3 2027                |

@@ -1,4 +1,4 @@
-# Dim Language Technical Specification (v0.1-draft)
+# Dim Language Technical Specification (v0.2)
 
 ## 1. Introduction
 
@@ -61,8 +61,8 @@ fn generic_add[T: Summable](x: T, y: T) -> T:
 3.  **Semantic Analysis**: Scope resolution, symbol tables, and trait verification.
 4.  **MIR (Dim Intermediate Representation)**: A control-flow graph (CFG) optimized for ownership tracking and borrow-checking.
 5.  **LLVM IR / MLIR**:
-    - **LLVM**: For generalized CPU targets (AArch64, x86_64).
-    - **MLIR**: Specifically for tensor dialects and hardware-specific kernel lowering (SPIR-V, NVVM).
+    - **LLVM**: For generalized CPU targets (AArch64, x86_64) — implemented in `dim_mir_to_llvm.py`.
+    - **MLIR**: Specifically for tensor dialects and hardware-specific kernel lowering (SPIR-V, NVVM) — future work.
 
 ### 3.2 Compilation Modes
 

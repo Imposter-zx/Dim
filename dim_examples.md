@@ -2,6 +2,8 @@
 
 These examples demonstrate the "working" ergonomics and technical depth of the Dim language.
 
+> **Status:** Phase 2 complete. Core language features implemented. See `test.dim` for working examples.
+
 ## 1. Systems & Security: Secure Packet Parser
 
 Demonstrates indentation syntax, `Option/Result`, ownership, and capability-based I/O.

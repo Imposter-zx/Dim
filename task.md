@@ -29,9 +29,17 @@
 - [x] Draft Compiler Prototype (Lexer/Parser in Python/Rust)
 - [x] Demonstrate MLIR/LLVM Lowering Logic (Conceptual)
 
-## Phase 4: Compiler Frontend & AST [/]
+## Phase 4: Compiler Frontend & AST [DONE]
 
-- [/] Define AST Nodes (Python/Rust)
-- [ ] Implement Parser (Recursive Descent)
-- [ ] Implement Semantic Analyzer Skeleton (Scope & Type Checking)
-- [ ] Create AST Visualizer/Printer
+- [x] Define AST Nodes (Python/Rust)
+- [x] Implement Parser (Recursive Descent)
+- [x] Implement Semantic Analyzer Skeleton (Scope & Type Checking)
+- [x] Create AST Visualizer/Printer
+
+## Phase 5: MIR, Borrow Checker & LLVM Codegen [DONE]
+
+- [x] Implement MIR (Mid-Level IR) with SSA locals and BasicBlocks
+- [x] Implement AST → MIR lowering pass
+- [x] Implement Borrow Checker (Polonius-inspired)
+- [x] Implement LLVM IR codegen (x86_64)
+- [x] Implement @tool decorator parsing

@@ -2,6 +2,8 @@
 
 I have designed the **Dim** programming language, a high-performance, statically-compiled language that unifies Pythonic ergonomics with C-level systems capabilities and first-class AI support.
 
+**Current Status:** Phase 2 complete — Full compiler pipeline from lexer to LLVM IR codegen implemented, with 35 passing tests.
+
 ## Key Features Overview
 
 ### 1. Ownership & Algebraic Types
@@ -37,11 +39,11 @@ verify:
     assert index < buffer.len
 ```
 
-- [Technical Specification](file:///C:/Users/HASSA/.gemini/antigravity/brain/f95f8a34-57b9-46ca-8cc9-df47bae6909a/dim_specification.md)
-- [Formal EBNF Grammar](file:///C:/Users/HASSA/.gemini/antigravity/brain/f95f8a34-57b9-46ca-8cc9-df47bae6909a/dim_grammar.ebnf)
-- [POC Lexer (Python)](file:///C:/Users/HASSA/.gemini/antigravity/brain/f95f8a34-57b9-46ca-8cc9-df47bae6909a/dim_poc_lexer.py)
-- [Examples Catalog](file:///C:/Users/HASSA/.gemini/antigravity/brain/f95f8a34-57b9-46ca-8cc9-df47bae6909a/dim_examples.md)
-- [Lowering Logic Overview](file:///C:/Users/HASSA/.gemini/antigravity/brain/f95f8a34-57b9-46ca-8cc9-df47bae6909a/dim_lowering_logic.md)
+- [Technical Specification](dim_specification.md)
+- [Formal EBNF Grammar](dim_grammar.ebnf)
+- [POC Lexer (Python)](dim_poc_lexer.py)
+- [Examples Catalog](dim_examples.md)
+- [Lowering Logic Overview](dim_lowering_logic.md)
 
 ## Verification
 

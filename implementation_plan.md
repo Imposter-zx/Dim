@@ -2,6 +2,8 @@
 
 Design a statically-compiled, high-performance language that unifies Python ergonomics with C/C++ performance, featuring first-class AI and ML support.
 
+> **Implementation Status:** Phase 2 complete — lexer, parser, type checker, MIR, borrow checker, LLVM codegen all implemented in Python. 35 tests passing.
+
 ## Proposed Design Sections
 
 ### 1. Language Core & Syntax

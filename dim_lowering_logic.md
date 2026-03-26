@@ -2,6 +2,8 @@
 
 This document illustrates how Dim code is lowered through various IR levels to achieve high performance and hardware specialized execution.
 
+> **Note:** The actual implementation is in `dim_mir_to_llvm.py`. This document shows the conceptual lowering process.
+
 ## 1. Source Code (Dim)
 
 ```dim
