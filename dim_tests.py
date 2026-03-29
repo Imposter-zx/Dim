@@ -947,6 +947,40 @@ def test_tc_member_access():
     assert_no_errors(diag)
 
 
+@test("Parser: parses struct instantiation", "parser")
+def test_parse_struct_instantiation():
+    from dim_ast import StructConstruct
+
+    code = """struct Point:
+    x: i32
+    y: i32
+
+fn f():
+    let p = Point(x: 1, y: 2)
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[1]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, StructConstruct)
+    assert let_stmt.value.struct_name == "Point"
+    assert len(let_stmt.value.args) == 2
+
+
+@test("TypeChecker: struct instantiation", "typecheck")
+def test_tc_struct_instantiation():
+    code = """struct Point:
+    x: i32
+    y: i32
+
+fn f():
+    let p = Point(x: 1, y: 2)
+    let q = p.x
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

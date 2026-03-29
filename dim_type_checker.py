@@ -20,6 +20,7 @@ from dim_ast import (
     MemberAccess,
     IndexAccess,
     ClosureExpr,
+    StructConstruct,
     ExprStmt,
     LetStmt,
     AssignStmt,
@@ -442,6 +443,15 @@ class TypeChecker:
                 elem_tys = [self.infer(e) for e in expr.elements]
                 return GenericType("tuple", elem_tys)
             return GenericType("tuple", [])
+
+        if isinstance(expr, StructConstruct):
+            struct_ty = self.env.lookup(expr.struct_name)
+            if struct_ty:
+                return struct_ty.ty
+            self.diag.error(
+                "E0020", f"Undefined struct `{expr.struct_name}`", expr.span
+            )
+            return UnknownType()
 
         if isinstance(expr, MemberAccess):
             obj_ty = self.infer(expr.expr)

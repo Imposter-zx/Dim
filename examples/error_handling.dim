@@ -1,0 +1,32 @@
+# Example: Error Handling
+# Demonstrates try/catch/finally and throw
+
+fn safe_divide(a: i32, b: i32) -> i32:
+    try:
+        if b == 0:
+            throw "Division by zero"
+        return a / b
+    catch e:
+        print("Error occurred")
+        return 0
+    finally:
+        cleanup()
+
+fn might_fail(x: i32):
+    if x < 0:
+        throw "Negative value"
+    return x * 2
+
+fn handle_errors():
+    let result = might_fail(5)
+    try:
+        let fail = might_fail(-1)
+    catch e:
+        print("Caught error!")
+    finally:
+        cleanup()
+
+fn main():
+    let a = safe_divide(10, 2)
+    let b = safe_divide(10, 0)
+    handle_errors()

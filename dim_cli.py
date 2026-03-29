@@ -116,8 +116,8 @@ def cmd_borrow(args):
 
 
 def cmd_build(args):
-    """Full pipeline: lex → parse → type-check → MIR → borrow-check → (future: codegen)."""
-    print("[1/4] Lexing and Parsing...")
+    """Full pipeline: lex → parse → type-check → MIR → borrow-check → native binary."""
+    print("[1/5] Lexing and Parsing...")
     from dim_lexer import Lexer
     from dim_parser import Parser
     from dim_semantic import SemanticAnalyzer
@@ -133,17 +133,17 @@ def cmd_build(args):
         parser.diag.flush(color=not args.no_color)
         sys.exit(1)
 
-    print("[2/4] Type checking...")
+    print("[2/5] Type checking...")
     sem = SemanticAnalyzer(source, args.file)
     ok = sem.analyze(ast)
     sem.diag.flush(color=not args.no_color)
     if not ok:
         sys.exit(1)
 
-    print("[3/4] Lowering to MIR...")
+    print("[3/5] Lowering to MIR...")
     module = lower_program(ast)
 
-    print("[4/4] Borrow checking...")
+    print("[4/5] Borrow checking...")
     all_ok = True
     for fn in module.functions:
         diag = DiagnosticBag(source, args.file)
@@ -155,8 +155,38 @@ def cmd_build(args):
     if not all_ok:
         sys.exit(1)
 
+    print("[5/5] Generating LLVM IR...")
+    from dim_mir_to_llvm import LLVMGenerator
+
+    gen = LLVMGenerator()
+    llvm_ir = gen.generate(module)
+    print(f"  LLVM IR generated ({len(llvm_ir)} bytes)")
+
+    if args.output:
+        output = args.output
+    else:
+        base = os.path.splitext(os.path.basename(args.file))[0]
+        output = base + ".ll"
+
+    with open(output, "w") as f:
+        f.write(llvm_ir)
+    print(f"  LLVM IR written to {output}")
+
     print("\n[PASS] Build succeeded for " + args.file)
-    print("  (Code generation / native binary output: coming in Phase 3)")
+
+    native = getattr(args, "native", False)
+    if native:
+        print("\nAttempting native binary generation...")
+        try:
+            from dim_native_codegen import emit_native
+
+            binary = emit_native(llvm_ir, output.replace(".ll", ""))
+            if binary:
+                print(f"  Native binary: {binary}")
+            else:
+                print("  (Install LLVM tools for native binaries)")
+        except Exception as e:
+            print(f"  Native compilation skipped: {e}")
 
 
 def cmd_test(args):
@@ -233,6 +263,10 @@ def main():
     # build
     p_build = sub.add_parser("build", help="Run full compiler pipeline")
     p_build.add_argument("file")
+    p_build.add_argument("-o", "--output", default=None, help="Output file")
+    p_build.add_argument(
+        "--native", action="store_true", help="Generate native binary (requires LLVM)"
+    )
     p_build.set_defaults(func=cmd_build)
 
     # test

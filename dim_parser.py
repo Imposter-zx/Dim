@@ -4,7 +4,7 @@
 # Produces a span-annotated AST (from dim_ast.py v0.2).
 # Reports errors through DiagnosticBag.
 
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Set
 from dim_token import Token, TokenType, Span
 from dim_diagnostic import DiagnosticBag
 from dim_types import (
@@ -33,6 +33,8 @@ class Parser:
         self.source = source
         self.filename = filename
         self.diag = DiagnosticBag(source, filename)
+        self._struct_names: Set[str] = set()
+        self._enum_names: Set[str] = set()
 
     # ── Navigation ────────────────────────────────────────────────────────────
 
@@ -414,6 +416,7 @@ class Parser:
         start = self._start_span()
         self._expect_kw("struct")
         name = self._expect(TokenType.IDENTIFIER).value
+        self._struct_names.add(name)
         generics = self._parse_generic_params()
         self._expect(TokenType.COLON)
         self._skip_newlines()
@@ -625,6 +628,24 @@ class Parser:
         builtin = resolve_builtin(name)
         return builtin if builtin else GenericType(name, [])
 
+    def _parse_struct_construct(self, name: str) -> StructConstruct:
+        start = self._start_span()
+        self._advance()
+        args: List[Tuple] = []
+        while not self._check(TokenType.RPAREN) and not self._check(TokenType.EOF):
+            if self._check(TokenType.IDENTIFIER):
+                field_name = self._advance().value
+                self._expect(TokenType.COLON)
+                value = self._parse_expression()
+                args.append((field_name, value))
+            else:
+                value = self._parse_expression()
+                args.append((None, value))
+            if not self._match(TokenType.COMMA):
+                break
+        self._expect(TokenType.RPAREN)
+        return StructConstruct(name, args, span=self._end_span(start))
+
     # ── Expressions (Pratt parser) ────────────────────────────────────────────
 
     _PREC: dict = {
@@ -736,17 +757,19 @@ class Parser:
         expr = self._parse_primary()
         while True:
             if self._check(TokenType.LPAREN):
-                # Function call
-                self._advance()
-                args: List[Expression] = []
-                while not self._check(TokenType.RPAREN) and not self._check(
-                    TokenType.EOF
-                ):
-                    args.append(self._parse_expression())
-                    if not self._match(TokenType.COMMA):
-                        break
-                self._expect(TokenType.RPAREN)
-                expr = Call(expr, args, span=expr.span)
+                if isinstance(expr, Identifier) and expr.name in self._struct_names:
+                    expr = self._parse_struct_construct(expr.name)
+                else:
+                    self._advance()
+                    args: List[Expression] = []
+                    while not self._check(TokenType.RPAREN) and not self._check(
+                        TokenType.EOF
+                    ):
+                        args.append(self._parse_expression())
+                        if not self._match(TokenType.COMMA):
+                            break
+                    self._expect(TokenType.RPAREN)
+                    expr = Call(expr, args, span=expr.span)
             elif self._check(TokenType.DOT):
                 self._advance()
                 member = self._expect(TokenType.IDENTIFIER).value

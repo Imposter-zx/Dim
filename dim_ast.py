@@ -118,6 +118,13 @@ class ClosureExpr(Expression):
 
 
 @dataclass
+class StructConstruct(Expression):
+    struct_name: str
+    args: List[Tuple]
+    span: Optional[Span] = None
+
+
+@dataclass
 class TensorExpr(Expression):
     dtype: str
     shape: List[int]

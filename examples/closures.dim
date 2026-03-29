@@ -1,0 +1,20 @@
+# Example: Closures and Higher-Order Functions
+# Demonstrates closures, lambdas, and functional programming
+
+fn apply_twice(f: i32, x: i32) -> i32:
+    return f(f(x))
+
+fn main():
+    let add_one = |x| -> x + 1
+    let add_two = |x| -> x + 2
+    let multiply = |x, y| -> x * y
+    
+    let a = apply_twice(5, 3)
+    let b = add_two(10)
+    let c = multiply(3, 4)
+    
+    let nums = [1, 2, 3]
+    let first = nums[0]
+    
+    let point = (10, 20, 30)
+    let count = point.len

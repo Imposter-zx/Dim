@@ -385,6 +385,7 @@ class LoweringPass:
             MemberAccess,
             IndexAccess,
             ClosureExpr,
+            StructConstruct,
             TensorExpr,
         )
 
@@ -464,6 +465,9 @@ class LoweringPass:
             return UseRValue(ConstOperand(I32, 0)), None
 
         if isinstance(expr, ClosureExpr):
+            return UseRValue(ConstOperand(I32, 0)), None
+
+        if isinstance(expr, StructConstruct):
             return UseRValue(ConstOperand(I32, 0)), None
 
         return UseRValue(ConstOperand(I32, 0)), None
