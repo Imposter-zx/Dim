@@ -1,0 +1,24 @@
+# Example: AI Tool Calling
+# Demonstrates @tool decorator with capability-based permissions
+
+@tool(permissions=[NetRead])
+fn fetch_url(url: string) -> string:
+    return "fetched content"
+
+@tool(permissions=[FileRead, FileWrite])
+fn read_file(path: string) -> string:
+    return "file content"
+
+@tool(permissions=[EnvRead])
+fn get_env(key: string) -> string:
+    return "env value"
+
+@tool(permissions=[NetRead, FileWrite('/tmp')])
+fn fetch_and_cache(url: string, path: string) -> string:
+    let content = fetch_url(url)
+    return content
+
+fn main():
+    let url = "https://example.com"
+    let data = fetch_url(url)
+    let env = get_env("PATH")

@@ -660,6 +660,138 @@ def test_borrow_immutable_assign():
     assert_has_error(diag, "E0044")
 
 
+@test("MIR: if/else with branches lowers correctly", "mir")
+def test_mir_if_else():
+    """
+    Verify if/else creates separate blocks for each branch.
+    """
+    from dim_types import I32, BOOL
+    from dim_mir import (
+        Local,
+        Place,
+        Mutability,
+        BasicBlock,
+        MIRFunction,
+        StorageLive,
+        StorageDead,
+        Assign,
+        Branch,
+        Return,
+        ConstOperand,
+        PlaceOperand,
+        UseRValue,
+        BinOpRValue,
+    )
+    from dim_mir_lowering import LoweringPass
+    from dim_parser import Parser
+    from dim_lexer import Lexer
+    from dim_semantic import SemanticAnalyzer
+
+    code = """fn choose(a: i32, b: i32) -> i32:
+    if a > b:
+        return a
+    else:
+        return b
+"""
+    ast, _, _ = _type_check(code)
+    lowerer = LoweringPass()
+    mir_mod = lowerer.lower(ast)
+    fn = mir_mod.functions[0]
+    assert len(fn.blocks) >= 3
+
+
+@test("MIR: while loop creates loop structure", "mir")
+def test_mir_while_loop():
+    """
+    Verify while loops create proper loop structure in MIR.
+    """
+    from dim_mir_lowering import LoweringPass
+
+    code = """fn count() -> i32:
+    let mut i = 0
+    while i < 10:
+        i = i + 1
+    return i
+"""
+    ast, _, _ = _type_check(code)
+    lowerer = LoweringPass()
+    mir_mod = lowerer.lower(ast)
+    fn = mir_mod.functions[0]
+    assert len(fn.blocks) >= 2
+
+
+@test("LLVM: void functions emit ret void", "llvm")
+def test_llvm_void_return():
+    """
+    Verify UNIT-returning functions emit 'ret void' in LLVM.
+    """
+    from dim_mir_lowering import lower_program
+    from dim_mir_to_llvm import LLVMGenerator
+    from dim_semantic import SemanticAnalyzer
+
+    code = """fn main():
+    let x = 1
+"""
+    ast, _, _ = _type_check(code)
+    module = lower_program(ast)
+    gen = LLVMGenerator()
+    llvm = gen.generate(module)
+    assert "define void @main()" in llvm
+    assert "ret void" in llvm
+
+
+@test("LLVM: function call emits call instruction", "llvm")
+def test_llvm_function_call():
+    """
+    Verify function calls emit 'call' in LLVM IR.
+    """
+    from dim_mir_lowering import lower_program
+    from dim_mir_to_llvm import LLVMGenerator
+    from dim_semantic import SemanticAnalyzer
+
+    code = """fn add(x: i32, y: i32) -> i32:
+    return x + y
+
+fn main():
+    let r = add(1, 2)
+"""
+    ast, _, _ = _type_check(code)
+    module = lower_program(ast)
+    gen = LLVMGenerator()
+    llvm = gen.generate(module)
+    assert "call i32 @add(i32 1, i32 2)" in llvm
+
+
+@test("TypeChecker: type inference from literal", "typecheck")
+def test_tc_infer_from_literal():
+    """
+    Verify type checker infers types from literal values.
+    """
+    from dim_types import F32
+
+    code = """fn literal_types():
+    let f = 3.14
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    let_stmt = fn.body[0]
+    assert repr(let_stmt.value.resolved_type) == "f32"
+
+
+@test("TypeChecker: binary op type mismatch", "typecheck")
+def test_tc_binary_op_mismatch():
+    """
+    Verify type checker catches type mismatches in binary operations.
+    """
+    code = """fn bad_add():
+    let x = 1 + "hello"
+"""
+    ast, diag, ok = _type_check(code)
+    assert_true(not ok, "Should fail type check")
+    assert_has_error(diag, "E0030")
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

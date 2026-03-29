@@ -1,0 +1,24 @@
+# Example: Ownership and Borrowing
+# Demonstrates borrow expressions and move semantics
+
+struct Buffer:
+    data: i32
+
+fn process_immutable(data: Buffer):
+    let view = &data
+    return
+
+fn update_mutable(buf: Buffer):
+    let ptr = &mut buf
+    return
+
+fn borrow_chains(data: Buffer):
+    let ref1 = &data
+    let ref2 = &ref1
+    return ref2
+
+fn main():
+    let buf = Buffer(data: 42)
+    process_immutable(buf)
+    update_mutable(buf)
+    let r = borrow_chains(buf)

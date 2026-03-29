@@ -1,0 +1,32 @@
+# Example: Control Flow
+# Demonstrates if/else, while loops, and comparison operators
+
+fn max(a: i32, b: i32) -> i32:
+    if a > b:
+        return a
+    else:
+        return b
+
+fn abs(x: i32) -> i32:
+    if x < 0:
+        return -x
+    else:
+        return x
+
+fn is_even(n: i32) -> i32:
+    if n % 2 == 0:
+        return 1
+    else:
+        return 0
+
+fn count_to_five():
+    let mut counter = 0
+    while counter < 5:
+        counter = counter + 1
+    return counter
+
+fn main():
+    let m = max(10, 20)
+    let a = abs(-42)
+    let e = is_even(7)
+    let c = count_to_five()

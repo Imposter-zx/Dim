@@ -23,7 +23,7 @@
 | First-class `prompt` type   | ✅ AST + type system                           |
 | `actor` / message-passing   | ✅ AST + parser                                |
 | `@tool` decorator           | ✅ Parser + semantic analysis                   |
-| Test Suite                  | ✅ 35 tests (`dim_tests.py`)                   |
+| Test Suite                  | ✅ 41 tests (`dim_tests.py`)                   |
 | Native binaries + WASM      | 🔜 Phase 3                                     |
 | Async runtime               | 🔜 Phase 4                                     |
 | Package manager             | 🔜 Phase 7                                     |
@@ -121,39 +121,41 @@ python dim_cli.py test --tag lexer   # filter by category
 ## Project Structure
 
 ```
-dim_token.py           — Token dataclass + Span source locations
-dim_lexer.py           — Production lexer (replaces dim_poc_lexer.py)
-dim_ast.py             — Span-annotated AST node definitions
-dim_parser.py          — Recursive descent + Pratt expression parser
-dim_types.py           — Algebraic type system (primitives, generics, tensors, prompts)
-dim_type_checker.py    — Hindley-Milner type inference engine
-dim_diagnostic.py       — Structured error/warning system with source highlighting
-dim_mir.py             — Mid-Level IR: SSA locals, BasicBlocks, CFG algorithms
-dim_mir_lowering.py    — AST → MIR lowering pass
-dim_mir_to_llvm.py     — MIR → LLVM IR codegen (x86_64)
-dim_borrow_checker.py  — Ownership & borrow checking (Polonius-inspired)
-dim_semantic.py        — Top-level semantic analysis orchestrator
-dim_cli.py             — Unified compiler CLI
-dim_tests.py           — Test suite (35 test cases)
-dim_grammar.ebnf       — Formal EBNF grammar specification
-dim_specification.md   — Full language technical specification
-test.dim               — Sample Dim source file
-```
-dim_token.py           — Token dataclass + Span source locations
-dim_lexer.py           — Production lexer (replaces dim_poc_lexer.py)
-dim_ast.py             — Span-annotated AST node definitions
-dim_parser.py          — Recursive descent + Pratt expression parser
-dim_types.py           — Algebraic type system (primitives, generics, tensors, prompts)
-dim_type_checker.py    — Hindley-Milner type inference engine
-dim_diagnostic.py      — Structured error/warning system with source highlighting
-dim_mir.py             — Mid-Level IR: SSA locals, BasicBlocks, CFG algorithms
-dim_mir_lowering.py    — AST → MIR lowering pass
-dim_borrow_checker.py  — Ownership & borrow checking (Polonius-inspired)
-dim_semantic.py        — Top-level semantic analysis orchestrator
-dim_cli.py             — Unified compiler CLI
-dim_tests.py           — Test suite (30 test cases)
-dim_grammar.ebnf       — Formal EBNF grammar specification
-dim_specification.md   — Full language technical specification
+dim/                      — Dim source root
+├── Compiler Core
+│   ├── dim_token.py          — Token and Span definitions
+│   ├── dim_lexer.py          — Lexer with INDENT/DEDENT
+│   ├── dim_parser.py         — Recursive descent parser
+│   ├── dim_ast.py            — AST node definitions
+│   ├── dim_types.py          — Type system
+│   ├── dim_type_checker.py   — Hindley-Milner type inference
+│   └── dim_semantic.py       — Semantic analysis
+├── IR & Codegen
+│   ├── dim_mir.py            — Mid-Level IR
+│   ├── dim_mir_lowering.py   — AST → MIR lowering
+│   ├── dim_mir_to_llvm.py    — MIR → LLVM IR
+│   └── dim_borrow_checker.py — Borrow checking
+├── Tools
+│   ├── dim_diagnostic.py     — Error/warning system
+│   └── dim_cli.py            — CLI interface
+├── Tests & Docs
+│   ├── dim_tests.py          — 41 test cases
+│   ├── test.dim              — Sample source
+│   └── examples/             — Example .dim files
+│       ├── functions.dim
+│       ├── control_flow.dim
+│       ├── ai_tools.dim
+│       ├── types.dim
+│       └── ownership.dim
+├── Documentation
+│   ├── README.md             — This file
+│   ├── CHANGELOG.md         — Version history
+│   ├── CONTRIBUTING.md       — Contribution guide
+│   ├── LICENSE.md            — MIT License
+│   ├── COMPILER_INTERNALS.md — Compiler internals
+│   ├── QUICK_REFERENCE.md   — Language quick reference
+│   └── dim_specification.md  — Language specification
+└── dim_grammar.ebnf          — Formal EBNF grammar
 ```
 
 ---

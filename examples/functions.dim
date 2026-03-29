@@ -1,0 +1,22 @@
+# Example: Functions and Expressions
+# Demonstrates basic function definitions, parameters, and return values
+
+fn add(x: i32, y: i32) -> i32:
+    return x + y
+
+fn sub(x: i32, y: i32) -> i32:
+    return x - y
+
+fn mul(x: i32, y: i32) -> i32:
+    return x * y
+
+fn div(x: i32, y: i32) -> i32:
+    return x / y
+
+fn main():
+    let a = 10
+    let b = 5
+    let sum = add(a, b)
+    let diff = sub(a, b)
+    let prod = mul(a, b)
+    let quot = div(a, b)
