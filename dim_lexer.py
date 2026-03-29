@@ -219,6 +219,11 @@ class _LineLexer:
                 "=>": TokenType.FAT_ARROW,
                 "&&": TokenType.AND,
                 "||": TokenType.OR,
+                "+=": TokenType.PLUSEQ,
+                "-=": TokenType.MINUSEQ,
+                "*=": TokenType.STAREQ,
+                "/=": TokenType.SLASHEQ,
+                "%=": TokenType.PERCENTEQ,
             }
             if two in OPS2:
                 self._advance()

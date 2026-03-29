@@ -185,7 +185,21 @@ class Parser:
 
         # Expression statement or assignment
         expr = self._parse_expression()
-        # Check for assignment
+        # Check for compound assignment
+        COMPOUND_OPS = {
+            TokenType.PLUSEQ: "+=",
+            TokenType.MINUSEQ: "-=",
+            TokenType.STAREQ: "*=",
+            TokenType.SLASHEQ: "/=",
+            TokenType.PERCENTEQ: "%=",
+        }
+        for tok_type, op in COMPOUND_OPS.items():
+            if self._check(tok_type):
+                self._advance()
+                value = self._parse_expression()
+                self._skip_newlines()
+                return AssignStmt(expr, op, value, span=self._end_span(start))
+        # Check for simple assignment
         if self._check(TokenType.EQ):
             self._advance()
             value = self._parse_expression()
@@ -662,7 +676,34 @@ class Parser:
             self._advance()
             operand = self._parse_unary()
             return AwaitExpr(operand, span=self._end_span(start))
+        if self._check(TokenType.PIPE):
+            return self._parse_closure(start)
         return self._parse_postfix()
+
+    def _parse_closure(self, start) -> ClosureExpr:
+        self._advance()
+        params: List[Param] = []
+        if not self._check(TokenType.PIPE):
+            p_name = self._expect(TokenType.IDENTIFIER).value
+            p_type = None
+            if self._match(TokenType.COLON):
+                p_type = self._parse_type()
+            params.append(Param(p_name, p_type, False, self._end_span(start)))
+            while self._match(TokenType.COMMA):
+                p_start = self._start_span()
+                p_name = self._expect(TokenType.IDENTIFIER).value
+                p_type = None
+                if self._match(TokenType.COLON):
+                    p_type = self._parse_type()
+                params.append(Param(p_name, p_type, False, self._end_span(p_start)))
+        self._expect(TokenType.PIPE)
+        if self._check(TokenType.ARROW):
+            self._advance()
+            ret_expr = self._parse_expression()
+            body = [ExprStmt(ret_expr, span=ret_expr.span)]
+        else:
+            body = self._parse_block()
+        return ClosureExpr(params, body, span=self._end_span(start))
 
     def _parse_postfix(self) -> Expression:
         expr = self._parse_primary()
@@ -733,9 +774,19 @@ class Parser:
 
         if tok.kind == TokenType.LPAREN:
             self._advance()
-            expr = self._parse_expression()
+            if self._check(TokenType.RPAREN):
+                self._advance()
+                return TupleLiteral([], span=self._end_span(start))
+            elements: List[Expression] = []
+            elements.append(self._parse_expression())
+            if self._match(TokenType.COMMA):
+                elements.append(self._parse_expression())
+                while self._match(TokenType.COMMA):
+                    elements.append(self._parse_expression())
             self._expect(TokenType.RPAREN)
-            return expr
+            if len(elements) == 1:
+                return elements[0]
+            return TupleLiteral(elements, span=self._end_span(start))
 
         if tok.kind == TokenType.LBRACKET:
             self._advance()

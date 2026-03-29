@@ -16,6 +16,10 @@ from dim_ast import (
     DerefExpr,
     AwaitExpr,
     ListLiteral,
+    TupleLiteral,
+    MemberAccess,
+    IndexAccess,
+    ClosureExpr,
     ExprStmt,
     LetStmt,
     AssignStmt,
@@ -34,6 +38,8 @@ from dim_ast import (
     Param,
     ModelCall,
     TensorExpr,
+    BreakStmt,
+    ContinueStmt,
 )
 from dim_types import (
     Type,
@@ -47,6 +53,7 @@ from dim_types import (
     FutureType,
     UnknownType,
     RefType,
+    PrimType,
     I32,
     I64,
     F32,
@@ -155,6 +162,7 @@ class TypeChecker:
         for n, ty in BUILTIN_TYPES.items():
             self.env.define(Symbol(n, ty))
         self.env.define(Symbol("model", GenericType("Model", [])))
+        self.env.define(Symbol("print", FunctionType([GenericType("T", [])], UNIT)))
         self._structs: Dict[str, StructDef] = {}
         self._enums: Dict[str, EnumDef] = {}
 
@@ -397,6 +405,40 @@ class TypeChecker:
         if isinstance(expr, ModelCall):
             input_ty = self.infer(expr.input)
             return GenericType("Model", [input_ty])
+
+        if isinstance(expr, TupleLiteral):
+            if expr.elements:
+                elem_tys = [self.infer(e) for e in expr.elements]
+                return GenericType("tuple", elem_tys)
+            return GenericType("tuple", [])
+
+        if isinstance(expr, MemberAccess):
+            obj_ty = self.infer(expr.expr)
+            if isinstance(obj_ty, StructType):
+                if expr.member in obj_ty.fields:
+                    return obj_ty.fields[expr.member]
+                self.diag.error(
+                    "E0020",
+                    f"Struct `{obj_ty.name}` has no field `{expr.member}`",
+                    expr.span,
+                )
+            return self.fresh_var()
+
+        if isinstance(expr, IndexAccess):
+            self.infer(expr.expr)
+            self.infer(expr.index)
+            return self.fresh_var()
+
+        if isinstance(expr, ClosureExpr):
+            param_tys = [self.resolve_type(p.type_ann) for p in expr.params]
+            ret_ty = self.fresh_var()
+            self.env.push()
+            for p, ty in zip(expr.params, param_tys):
+                self.env.define(Symbol(p.name, ty, p.is_mut, p.span))
+            for s in expr.body:
+                self.check_stmt(s)
+            self.env.pop()
+            return FunctionType(param_tys, ret_ty)
 
         return UnknownType()
 

@@ -792,6 +792,98 @@ def test_tc_binary_op_mismatch():
     assert_has_error(diag, "E0030")
 
 
+@test("Parser: parses tuple literal", "parser")
+def test_parse_tuple():
+    from dim_ast import TupleLiteral
+
+    code = "fn f():\n    let t = (1, 2, 3)\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, TupleLiteral)
+
+
+@test("Parser: parses closure/lambda", "parser")
+def test_parse_closure():
+    from dim_ast import ClosureExpr
+
+    code = "fn f():\n    let add = |x, y| -> x + y\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, ClosureExpr)
+
+
+@test("Parser: parses member access", "parser")
+def test_parse_member_access():
+    from dim_ast import MemberAccess
+
+    code = "fn f():\n    let x = point.x\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, MemberAccess)
+
+
+@test("TypeChecker: for loop lowers", "typecheck")
+def test_tc_for_loop():
+    code = "fn count():\n    let items = [1, 2, 3]\n    let mut sum = 0\n    for i in items:\n        sum = sum + i\n"
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("TypeChecker: match statement", "typecheck")
+def test_tc_match():
+    code = "fn describe(x: i32):\n    match x:\n        0: return\n        1: return\n"
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("TypeChecker: break and continue", "typecheck")
+def test_tc_break_continue():
+    code = "fn loop():\n    while true:\n        if true:\n            break\n        if false:\n            continue\n"
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("LLVM: compound assignment works", "llvm")
+def test_llvm_compound_assign():
+    from dim_mir_lowering import lower_program
+    from dim_mir_to_llvm import LLVMGenerator
+    from dim_semantic import SemanticAnalyzer
+
+    code = """fn main():
+    let mut x = 0
+    x = x + 1
+"""
+    ast, _, _ = _type_check(code)
+    module = lower_program(ast)
+    gen = LLVMGenerator()
+    llvm = gen.generate(module)
+    assert "define void @main()" in llvm
+
+
+@test("LLVM: for loop structure", "llvm")
+def test_llvm_for_loop():
+    from dim_mir_lowering import lower_program
+    from dim_mir_to_llvm import LLVMGenerator
+    from dim_semantic import SemanticAnalyzer
+
+    code = """fn count():
+    let items = [1]
+    for i in items:
+        x = i
+"""
+    ast, _, _ = _type_check(code)
+    module = lower_program(ast)
+    gen = LLVMGenerator()
+    llvm = gen.generate(module)
+    assert "define void @count()" in llvm
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

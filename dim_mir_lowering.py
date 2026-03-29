@@ -74,6 +74,7 @@ class LoweringPass:
         self.local_map: Dict[str, Local] = {}
         self.block_counter = 0
         self.temp_counter = 0
+        self._loop_stack: List[Dict] = []
 
     def lower(self, prog):
         module = MIRModule("main")
@@ -94,6 +95,7 @@ class LoweringPass:
         self.local_map = {}
         self.block_counter = 0
         self.temp_counter = 0
+        self._loop_stack = []
 
         bb0 = BasicBlock(0)
         mir_fn.blocks.append(bb0)
@@ -215,12 +217,29 @@ class LoweringPass:
                 bb.stmts.append(Assign(Place(loc), rval))
 
         elif isinstance(stmt, AssignStmt):
-            val, _ = self.lower_expr(stmt.value, bb)
-            if isinstance(stmt.target, Identifier):
-                loc = self.local_map.get(stmt.target.name)
-                if loc:
-                    rval = val if val else UseRValue(ConstOperand(loc.ty, None))
-                    bb.stmts.append(Assign(Place(loc), rval))
+            if stmt.op == "=":
+                val, _ = self.lower_expr(stmt.value, bb)
+                if isinstance(stmt.target, Identifier):
+                    loc = self.local_map.get(stmt.target.name)
+                    if loc:
+                        rval = val if val else UseRValue(ConstOperand(loc.ty, None))
+                        bb.stmts.append(Assign(Place(loc), rval))
+            else:
+                target_val, _ = self.lower_expr(stmt.target, bb)
+                rhs_val, _ = self.lower_expr(stmt.value, bb)
+                op_map = {"+=": "+", "-=": "-", "*=": "*", "/=": "/", "%=": "%"}
+                bin_op = op_map.get(stmt.op, stmt.op)
+                if isinstance(stmt.target, Identifier):
+                    loc = self.local_map.get(stmt.target.name)
+                    if loc:
+                        lhs = target_val if target_val else Place(loc)
+                        rhs = (
+                            rhs_val
+                            if rhs_val
+                            else UseRValue(ConstOperand(loc.ty, None))
+                        )
+                        rval = BinOpRValue(lhs, bin_op, rhs)
+                        bb.stmts.append(Assign(Place(loc), rval))
 
         elif isinstance(stmt, ReturnStmt):
             val, _ = self.lower_expr(stmt.value, bb) if stmt.value else (None, None)
@@ -267,6 +286,8 @@ class LoweringPass:
             body_bb = self._new_block()
             merge_bb = self._new_block()
 
+            self._loop_stack.append({"merge": merge_bb, "cond": cond_bb})
+
             bb.terminator = Goto(cond_bb.id)
 
             cond, _ = self.lower_expr(stmt.condition, cond_bb)
@@ -284,6 +305,7 @@ class LoweringPass:
                 body_bb.terminator = Goto(cond_bb.id)
 
             mir_fn.blocks.append(merge_bb)
+            self._loop_stack.pop()
 
         elif isinstance(stmt, ForStmt):
             iter_val, _ = self.lower_expr(stmt.iterable, bb)
@@ -293,6 +315,8 @@ class LoweringPass:
 
             body_bb = self._new_block()
             merge_bb = self._new_block()
+
+            self._loop_stack.append({"merge": merge_bb, "cond": body_bb})
 
             self.local_map[stmt.iterator] = iter_loc
             mir_fn.locals.append(iter_loc)
@@ -307,22 +331,38 @@ class LoweringPass:
                 body_bb.terminator = Goto(merge_bb.id)
 
             mir_fn.blocks.append(merge_bb)
+            self._loop_stack.pop()
 
         elif isinstance(stmt, BreakStmt):
-            bb.terminator = Goto(mir_fn.blocks[-1].id)
+            if self._loop_stack:
+                merge_bb = self._loop_stack[-1]["merge"]
+                bb.terminator = Goto(merge_bb.id)
+            else:
+                bb.terminator = Goto(0)
 
         elif isinstance(stmt, ContinueStmt):
-            bb.terminator = Goto(bb.id)
+            if self._loop_stack:
+                cond_bb = self._loop_stack[-1]["cond"]
+                bb.terminator = Goto(cond_bb.id)
+            else:
+                bb.terminator = Goto(0)
 
         elif isinstance(stmt, MatchStmt):
+            expr_val, _ = self.lower_expr(stmt.expr, bb)
             merge_bb = self._new_block()
-            for arm in stmt.arms:
+            prev_bb = bb
+            for i, arm in enumerate(stmt.arms):
                 arm_bb = self._new_block()
                 mir_fn.blocks.append(arm_bb)
                 for s in arm.body:
                     self.lower_stmt(s, arm_bb, mir_fn)
                 if arm_bb.terminator is None:
                     arm_bb.terminator = Goto(merge_bb.id)
+                if i == 0:
+                    prev_bb.terminator = Goto(arm_bb.id)
+                else:
+                    prev_bb.terminator = Goto(arm_bb.id)
+                prev_bb = arm_bb
             mir_fn.blocks.append(merge_bb)
 
         return cont
@@ -341,6 +381,10 @@ class LoweringPass:
             DerefExpr,
             AwaitExpr,
             ListLiteral,
+            TupleLiteral,
+            MemberAccess,
+            IndexAccess,
+            ClosureExpr,
             TensorExpr,
         )
 
@@ -401,6 +445,26 @@ class LoweringPass:
                 else F32,
                 expr.shape,
             ), None
+
+        if isinstance(expr, ListLiteral):
+            return TensorRValue(
+                expr.resolved_type.dtype
+                if hasattr(expr.resolved_type, "dtype")
+                else F32,
+                [len(expr.elements)],
+            ), None
+
+        if isinstance(expr, TupleLiteral):
+            return UseRValue(ConstOperand(I32, 0)), None
+
+        if isinstance(expr, MemberAccess):
+            return UseRValue(ConstOperand(I32, 0)), None
+
+        if isinstance(expr, IndexAccess):
+            return UseRValue(ConstOperand(I32, 0)), None
+
+        if isinstance(expr, ClosureExpr):
+            return UseRValue(ConstOperand(I32, 0)), None
 
         return UseRValue(ConstOperand(I32, 0)), None
 

@@ -91,6 +91,33 @@ class ListLiteral(Expression):
 
 
 @dataclass
+class TupleLiteral(Expression):
+    elements: List[Expression]
+    span: Optional[Span] = None
+
+
+@dataclass
+class MemberAccess(Expression):
+    expr: Expression
+    member: str
+    span: Optional[Span] = None
+
+
+@dataclass
+class IndexAccess(Expression):
+    expr: Expression
+    index: Expression
+    span: Optional[Span] = None
+
+
+@dataclass
+class ClosureExpr(Expression):
+    params: List["Param"]
+    body: List["Statement"]
+    span: Optional[Span] = None
+
+
+@dataclass
 class TensorExpr(Expression):
     dtype: str
     shape: List[int]

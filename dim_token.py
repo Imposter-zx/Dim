@@ -52,6 +52,11 @@ class TokenType(Enum):
     FAT_ARROW = auto()  # =>
     AMP = auto()  # & (borrow)
     PIPE = auto()  # |
+    PLUSEQ = auto()  # +=
+    MINUSEQ = auto()  # -=
+    STAREQ = auto()  # *=
+    SLASHEQ = auto()  # /=
+    PERCENTEQ = auto()  # %=
 
     # Indentation (injected by lexer)
     INDENT = auto()
