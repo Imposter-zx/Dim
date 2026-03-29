@@ -37,10 +37,13 @@ class SemanticAnalyzer:
         "EnvRead",
     }
 
-    def __init__(self, source: str = "", filename: str = "<stdin>"):
+    def __init__(
+        self, source: str = "", filename: str = "<stdin>", module_resolver=None
+    ):
         self.source = source
         self.filename = filename
-        self.tc = TypeChecker(source, filename)
+        self.module_resolver = module_resolver
+        self.tc = TypeChecker(source, filename, module_resolver)
         self.diag = self.tc.diag
         self._tools: Dict[str, ToolDecorator] = {}
         self._capability_calls: List[tuple] = []

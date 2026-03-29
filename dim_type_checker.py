@@ -41,6 +41,7 @@ from dim_ast import (
     TensorExpr,
     BreakStmt,
     ContinueStmt,
+    ImportStmt,
 )
 from dim_types import (
     Type,
@@ -154,9 +155,17 @@ class TypeEnv:
 
 
 class TypeChecker:
-    def __init__(self, source: str = "", filename: str = ""):
+    def __init__(
+        self,
+        source: str = "",
+        filename: str = "",
+        module_resolver=None,
+    ):
+        self.source = source
+        self.filename = filename
         self.env = TypeEnv()
         self.diag = DiagnosticBag(source, filename)
+        self._module_resolver = module_resolver
         self._current_fn_return: Optional[Type] = None
         self.current_capabilities: Set[str] = set()
         self._var_counter = 0
@@ -229,9 +238,33 @@ class TypeChecker:
             MatchStmt,
             TryStmt,
             ThrowStmt,
+            ImportStmt,
         )
 
-        if isinstance(stmt, FunctionDef):
+        if isinstance(stmt, ImportStmt):
+            if self._module_resolver:
+                module = self._module_resolver.resolve(stmt, self.source, self.filename)
+                if module:
+                    for name, exported in module.exports.items():
+                        if (
+                            isinstance(exported, FunctionDef)
+                            and exported.resolved_fn_type
+                        ):
+                            self.env.define(
+                                Symbol(name, exported.resolved_fn_type, span=stmt.span)
+                            )
+                        elif isinstance(exported, StructDef):
+                            self._structs[exported.name] = exported
+                        elif isinstance(exported, EnumDef):
+                            self._enums[exported.name] = exported
+                else:
+                    self.diag.error(
+                        "E0400",
+                        f"Module `{'.'.join(stmt.path)}` not found",
+                        stmt.span or Span(0, 0, 0, 0),
+                    )
+
+        elif isinstance(stmt, FunctionDef):
             self.env.push()
             old_ret = self._current_fn_return
             old_caps = self.current_capabilities

@@ -981,6 +981,59 @@ fn f():
     assert_no_errors(diag)
 
 
+@test("Parser: parses import statement", "parser")
+def test_parse_import():
+    from dim_ast import ImportStmt
+
+    code = "import std.io\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], ImportStmt)
+    assert ast.statements[0].path == ["std", "io"]
+
+
+@test("Parser: parses import with alias", "parser")
+def test_parse_import_alias():
+    from dim_ast import ImportStmt
+
+    code = "import std.io as io\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], ImportStmt)
+    assert ast.statements[0].path == ["std", "io"]
+    assert ast.statements[0].alias == "io"
+
+
+@test("Parser: parses import with module prefix", "parser")
+def test_parse_import_module():
+    from dim_ast import ImportStmt
+
+    code = "import std.vec\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], ImportStmt)
+    assert ast.statements[0].path == ["std", "vec"]
+
+
+@test("TypeChecker: import statement type checks", "typecheck")
+def test_tc_import():
+    from dim_module_resolver import ModuleResolver
+
+    code = "import std.io\n"
+    from dim_lexer import Lexer
+    from dim_parser import Parser
+    from dim_semantic import SemanticAnalyzer
+
+    tokens = Lexer(code, "test.dim").tokenize()
+    parser = Parser(tokens, code, "test.dim")
+    ast = parser.parse_program()
+    resolver = ModuleResolver("test.dim")
+    sem = SemanticAnalyzer(code, "test.dim", resolver)
+    resolver.resolve_program(ast, code, "test.dim")
+    ok = sem.analyze(ast)
+    assert_no_errors(sem.diag)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

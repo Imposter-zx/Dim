@@ -20,13 +20,15 @@
 | AST → MIR Lowering          | ✅ (`dim_mir_lowering.py`)                     |
 | Borrow Checker (MIR-level)  | ✅ Polonius-inspired (`dim_borrow_checker.py`) |
 | LLVM IR Codegen             | ✅ (`dim_mir_to_llvm.py`)                      |
+| Module Import Resolution    | ✅ (`dim_module_resolver.py`)                 |
 | First-class `prompt` type   | ✅ AST + type system                           |
 | `actor` / message-passing   | ✅ AST + parser                                |
 | `@tool` decorator           | ✅ Parser + semantic analysis                   |
 | Error handling (try/catch) | ✅ Parser + type checker                       |
 | Standard library            | ✅ len, abs, min, max, assert, panic         |
+| Standard library modules    | ✅ std/io, std/vec                           |
 | Closures & lambdas          | ✅ `|x, y| -> expr` syntax                   |
-| Test Suite                  | ✅ 54 tests (`dim_tests.py`)                   |
+| Test Suite                  | ✅ 61 tests (`dim_tests.py`)                   |
 | Native binaries + WASM      | 🔜 Phase 3                                     |
 | Async runtime               | 🔜 Phase 4                                     |
 | Package manager             | 🔜 Phase 7                                     |
@@ -102,6 +104,21 @@ fn demo_std():
     let m = min(1, 2)
     let mx = max(1, 2)
     assert x > 0
+
+# Module imports
+import std.io
+import std.vec
+
+fn demo_io():
+    print("Hello, World!")
+    let content = read_file("test.txt")
+    if file_exists("test.txt"):
+        println("File exists!")
+
+fn demo_vec():
+    let arr = [1, 2, 3]
+    push(arr, 4)
+    let x = pop(arr)
 ```
 
 ---
@@ -110,8 +127,9 @@ fn demo_std():
 
 ```
 Source (.dim)
-    ↓  dim_lexer.py          — Tokenisation + INDENT/DEDENT
-    ↓  dim_parser.py         — AST construction (Pratt + recursive descent)
+    ↓  dim_lexer.py           — Tokenisation + INDENT/DEDENT
+    ↓  dim_parser.py          — AST construction (Pratt + recursive descent)
+    ↓  dim_module_resolver.py — Module import resolution
     ↓  dim_type_checker.py   — HM type inference, scope resolution
     ↓  dim_mir_lowering.py   — AST → MIR (SSA Control Flow Graph)
     ↓  dim_borrow_checker.py — Ownership & borrow validation (Polonius)

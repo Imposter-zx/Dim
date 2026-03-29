@@ -4,6 +4,24 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.4.0] - 2026-03-29
+
+### Added
+- **Module Import Resolution**: `import std.io`, `import std.vec`
+  - `dim_module_resolver.py`: Module resolution and caching
+  - Standard library modules in `std/` directory
+  - `std/io.dim`: print, println, input, read_file, write_file, file_exists
+  - `std/vec.dim`: push, pop, get, set, slice, reverse, sort, contains
+- **4 new tests** (61 → 65 tests)
+  - Import statement parsing
+  - Import with alias
+  - Import module resolution
+  - Import type checking
+
+### Changed
+- `TypeChecker` and `SemanticAnalyzer` now accept `module_resolver` parameter
+- CLI commands updated to use module resolver
+
 ## [0.3.0] - 2026-03-29
 
 ### Added
@@ -24,7 +42,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Loop stack: Proper tracking for nested break/continue
 
 ### Changed
-- Test suite expanded: 41 → 54 tests
+- Test suite expanded: 41 → 61 tests
 
 ## [0.2.0] - 2026-03-29
 

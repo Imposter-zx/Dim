@@ -47,6 +47,7 @@ def cmd_check(args):
     from dim_lexer import Lexer
     from dim_parser import Parser
     from dim_semantic import SemanticAnalyzer
+    from dim_module_resolver import ModuleResolver
 
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
@@ -55,7 +56,9 @@ def cmd_check(args):
     if parser.diag.has_errors:
         parser.diag.flush(color=not args.no_color)
         sys.exit(1)
-    sem = SemanticAnalyzer(source, args.file)
+    module_resolver = ModuleResolver(args.file)
+    sem = SemanticAnalyzer(source, args.file, module_resolver)
+    module_resolver.resolve_program(ast, source, args.file)
     ok = sem.analyze(ast)
     if sem.diag.has_errors:
         sem.diag.flush(color=not args.no_color)
@@ -69,12 +72,15 @@ def cmd_mir(args):
     from dim_parser import Parser
     from dim_semantic import SemanticAnalyzer
     from dim_mir_lowering import lower_program
+    from dim_module_resolver import ModuleResolver
 
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
     ast = parser.parse_program()
-    sem = SemanticAnalyzer(source, args.file)
+    module_resolver = ModuleResolver(args.file)
+    sem = SemanticAnalyzer(source, args.file, module_resolver)
+    module_resolver.resolve_program(ast, source, args.file)
     sem.analyze(ast)
     sem.diag.flush(color=not args.no_color)
     module = lower_program(ast)
@@ -90,12 +96,15 @@ def cmd_borrow(args):
     from dim_mir_lowering import lower_program
     from dim_borrow_checker import BorrowChecker
     from dim_diagnostic import DiagnosticBag
+    from dim_module_resolver import ModuleResolver
 
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
     parser = Parser(tokens, source, args.file)
     ast = parser.parse_program()
-    sem = SemanticAnalyzer(source, args.file)
+    module_resolver = ModuleResolver(args.file)
+    sem = SemanticAnalyzer(source, args.file, module_resolver)
+    module_resolver.resolve_program(ast, source, args.file)
     sem.analyze(ast)
     if sem.diag.has_errors:
         sem.diag.flush(color=not args.no_color)
@@ -124,6 +133,7 @@ def cmd_build(args):
     from dim_mir_lowering import lower_program
     from dim_borrow_checker import BorrowChecker
     from dim_diagnostic import DiagnosticBag
+    from dim_module_resolver import ModuleResolver
 
     source = _load_file(args.file)
     tokens = Lexer(source, args.file).tokenize()
@@ -134,7 +144,9 @@ def cmd_build(args):
         sys.exit(1)
 
     print("[2/5] Type checking...")
-    sem = SemanticAnalyzer(source, args.file)
+    module_resolver = ModuleResolver(args.file)
+    sem = SemanticAnalyzer(source, args.file, module_resolver)
+    module_resolver.resolve_program(ast, source, args.file)
     ok = sem.analyze(ast)
     sem.diag.flush(color=not args.no_color)
     if not ok:

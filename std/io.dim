@@ -1,0 +1,19 @@
+# std/io.dim — I/O utilities for Dim
+
+fn print(msg: str) -> unit:
+    return none
+
+fn println(msg: str) -> unit:
+    return none
+
+fn input(p: str) -> str:
+    return ""
+
+fn read_file(path: str) -> str:
+    return ""
+
+fn write_file(path: str, content: str) -> unit:
+    return none
+
+fn file_exists(path: str) -> bool:
+    return false

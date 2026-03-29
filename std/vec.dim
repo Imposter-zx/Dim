@@ -1,0 +1,25 @@
+# std/vec.dim — Vector/Array utilities for Dim
+
+fn push<T>(vec: [T], item: T) -> unit:
+    return none
+
+fn pop<T>(vec: [T]) -> T:
+    return vec[0]
+
+fn get<T>(vec: [T], index: i32) -> T:
+    return vec[0]
+
+fn set<T>(vec: [T], index: i32, value: T) -> unit:
+    return none
+
+fn slice<T>(vec: [T], start: i32, end: i32) -> [T]:
+    return vec
+
+fn reverse<T>(vec: [T]) -> [T]:
+    return vec
+
+fn sort<T>(vec: [T]) -> unit:
+    return none
+
+fn contains<T>(vec: [T], item: T) -> bool:
+    return false
