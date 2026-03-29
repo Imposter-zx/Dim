@@ -884,6 +884,69 @@ def test_llvm_for_loop():
     assert "define void @count()" in llvm
 
 
+@test("Parser: parses try/catch/throw", "parser")
+def test_parse_try_catch():
+    from dim_ast import TryStmt, ThrowStmt
+
+    code = """fn f():
+    try:
+        x = 1
+    catch e:
+        x = 2
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    assert isinstance(fn.body[0], TryStmt)
+
+
+@test("Parser: parses throw statement", "parser")
+def test_parse_throw():
+    from dim_ast import ThrowStmt
+
+    code = "fn f():\n    throw Error()\n"
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[0]
+    assert isinstance(fn.body[0], ThrowStmt)
+
+
+@test("TypeChecker: try/catch/throw works", "typecheck")
+def test_tc_try_catch():
+    code = """fn f():
+    let mut x = 0
+    try:
+        x = 1
+    catch e:
+        x = 2
+    finally:
+        x = 3
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("TypeChecker: standard library functions", "typecheck")
+def test_tc_stdlib():
+    code = """fn f():
+    let a = abs(-5)
+    let b = min(1, 2)
+    let c = max(1, 2)
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("TypeChecker: member access on identifier", "typecheck")
+def test_tc_member_access():
+    code = """fn f():
+    let s = "hello"
+    let l = s.len
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

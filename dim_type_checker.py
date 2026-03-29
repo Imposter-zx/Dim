@@ -163,6 +163,17 @@ class TypeChecker:
             self.env.define(Symbol(n, ty))
         self.env.define(Symbol("model", GenericType("Model", [])))
         self.env.define(Symbol("print", FunctionType([GenericType("T", [])], UNIT)))
+        self.env.define(Symbol("len", FunctionType([GenericType("T", [])], I32)))
+        self.env.define(
+            Symbol("range", FunctionType([I32], GenericType("Iterator", [I32])))
+        )
+        self.env.define(Symbol("assert", FunctionType([BOOL], UNIT)))
+        self.env.define(
+            Symbol("panic", FunctionType([GenericType("T", [])], GenericType("T", [])))
+        )
+        self.env.define(Symbol("abs", FunctionType([I32], I32)))
+        self.env.define(Symbol("min", FunctionType([I32, I32], I32)))
+        self.env.define(Symbol("max", FunctionType([I32, I32], I32)))
         self._structs: Dict[str, StructDef] = {}
         self._enums: Dict[str, EnumDef] = {}
 
@@ -215,6 +226,8 @@ class TypeChecker:
             BreakStmt,
             ContinueStmt,
             MatchStmt,
+            TryStmt,
+            ThrowStmt,
         )
 
         if isinstance(stmt, FunctionDef):
@@ -230,6 +243,24 @@ class TypeChecker:
             self._current_fn_return = old_ret
             self.current_capabilities = old_caps
             self.env.pop()
+
+        elif isinstance(stmt, TryStmt):
+            for s in stmt.body:
+                self.check_stmt(s)
+            for c in stmt.catches:
+                self.env.push()
+                self.env.define(
+                    Symbol(c.param, GenericType("Error", []), False, c.span)
+                )
+                for s in c.body:
+                    self.check_stmt(s)
+                self.env.pop()
+            if stmt.finally_body:
+                for s in stmt.finally_body:
+                    self.check_stmt(s)
+
+        elif isinstance(stmt, ThrowStmt):
+            self.infer(stmt.expr)
 
         elif isinstance(stmt, LetStmt):
             ty = self.infer(stmt.value)
@@ -422,6 +453,14 @@ class TypeChecker:
                     f"Struct `{obj_ty.name}` has no field `{expr.member}`",
                     expr.span,
                 )
+            elif isinstance(obj_ty, GenericType) and obj_ty.name == "str":
+                if expr.member == "len":
+                    return I32
+            elif isinstance(obj_ty, TensorType):
+                if expr.member == "len":
+                    return I32
+                if expr.member == "shape":
+                    return GenericType("tuple", [])
             return self.fresh_var()
 
         if isinstance(expr, IndexAccess):

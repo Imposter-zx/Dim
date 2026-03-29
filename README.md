@@ -23,7 +23,10 @@
 | First-class `prompt` type   | ✅ AST + type system                           |
 | `actor` / message-passing   | ✅ AST + parser                                |
 | `@tool` decorator           | ✅ Parser + semantic analysis                   |
-| Test Suite                  | ✅ 41 tests (`dim_tests.py`)                   |
+| Error handling (try/catch) | ✅ Parser + type checker                       |
+| Standard library            | ✅ len, abs, min, max, assert, panic         |
+| Closures & lambdas          | ✅ `|x, y| -> expr` syntax                   |
+| Test Suite                  | ✅ 54 tests (`dim_tests.py`)                   |
 | Native binaries + WASM      | 🔜 Phase 3                                     |
 | Async runtime               | 🔜 Phase 4                                     |
 | Package manager             | 🔜 Phase 7                                     |
@@ -75,6 +78,30 @@ trait Summable[T]:
 
 fn generic_sum[T: Summable](a: T, b: T) -> T:
     return T.add(a, b)
+
+# Error handling
+fn safe_div(a: i32, b: i32):
+    try:
+        if b == 0:
+            throw Error()
+        return a / b
+    catch e:
+        print("Error!")
+    finally:
+        cleanup()
+
+# Closures and tuples
+fn use_closure():
+    let add = |x, y| -> x + y
+    let point = (1, 2, 3)
+    let len = point.len
+
+# Standard library
+fn demo_std():
+    let x = abs(-5)
+    let m = min(1, 2)
+    let mx = max(1, 2)
+    assert x > 0
 ```
 
 ---

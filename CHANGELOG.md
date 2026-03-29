@@ -4,6 +4,28 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.3.0] - 2026-03-29
+
+### Added
+- **Error Handling**: try/catch/finally and throw statements
+- **Standard Library Functions**: len, range, assert, panic, abs, min, max
+- **String Operations**: .len, .shape member access
+- **Array/Tensor Operations**: .len, .shape member access
+- **Closure Syntax**: `|x, y| -> expr` syntax with return type
+- **Tuple Literals**: `(1, 2, 3)` syntax with type inference
+- **Compound Assignment**: `+=`, `-=`, `*=`, `/=`, `%=` operators
+- **Enhanced Loop Control**: break/continue with proper loop stack
+- **Match Statement**: Pattern matching with MIR lowering
+- **New Keywords**: try, catch, throw, finally, len, range, assert, panic
+
+### Fixed
+- Parser: Closure syntax with `|x, y| -> expr` 
+- Type checker: PrimType import for unification
+- Loop stack: Proper tracking for nested break/continue
+
+### Changed
+- Test suite expanded: 41 → 54 tests
+
 ## [0.2.0] - 2026-03-29
 
 ### Added

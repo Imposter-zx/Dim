@@ -309,6 +309,27 @@ class ContinueStmt(Statement):
 
 
 @dataclass
+class CatchClause(Node):
+    param: str
+    body: List[Statement]
+    span: Optional[Span] = None
+
+
+@dataclass
+class TryStmt(Statement):
+    body: List[Statement]
+    catches: List[CatchClause]
+    finally_body: Optional[List[Statement]] = None
+    span: Optional[Span] = None
+
+
+@dataclass
+class ThrowStmt(Statement):
+    expr: Expression
+    span: Optional[Span] = None
+
+
+@dataclass
 class UnsafeBlock(Statement):
     body: List[Statement]
     span: Optional[Span] = None

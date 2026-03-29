@@ -166,21 +166,11 @@ class LoweringPass:
             ContinueStmt,
             MatchStmt,
             ExprStmt,
+            TryStmt,
+            ThrowStmt,
         )
 
         cont: Optional[BasicBlock] = None
-        from dim_ast import (
-            Identifier,
-            AssignStmt,
-            IfStmt,
-            WhileStmt,
-            ForStmt,
-            ReturnStmt,
-            BreakStmt,
-            ContinueStmt,
-            MatchStmt,
-            ExprStmt,
-        )
 
         if isinstance(stmt, LetStmt):
             ty = (
@@ -244,6 +234,16 @@ class LoweringPass:
         elif isinstance(stmt, ReturnStmt):
             val, _ = self.lower_expr(stmt.value, bb) if stmt.value else (None, None)
             bb.terminator = Return(self._to_operand(val, bb))
+
+        elif isinstance(stmt, TryStmt):
+            for s in stmt.body:
+                self.lower_stmt(s, bb, mir_fn)
+            if stmt.finally_body:
+                for s in stmt.finally_body:
+                    self.lower_stmt(s, bb, mir_fn)
+
+        elif isinstance(stmt, ThrowStmt):
+            pass
 
         elif isinstance(stmt, ExprStmt):
             _, next_bb = self.lower_expr(stmt.expr, bb)

@@ -182,6 +182,10 @@ class Parser:
             self._advance()
             body = self._parse_block()
             return UnsafeBlock(body, span=self._end_span(start))
+        if self._check_kw("try"):
+            return self._parse_try()
+        if self._check_kw("throw"):
+            return self._parse_throw()
 
         # Expression statement or assignment
         expr = self._parse_expression()
@@ -262,6 +266,29 @@ class Parser:
         iterable = self._parse_expression()
         body = self._parse_block()
         return ForStmt(iterator, iterable, body, span=self._end_span(start))
+
+    def _parse_try(self):
+        start = self._start_span()
+        self._expect_kw("try")
+        try_body = self._parse_block()
+        catches: List[CatchClause] = []
+        finally_body = None
+        while self._check_kw("catch"):
+            self._advance()
+            param = self._expect(TokenType.IDENTIFIER).value
+            catch_body = self._parse_block()
+            catches.append(CatchClause(param, catch_body, span=self._end_span(start)))
+        if self._check_kw("finally"):
+            self._advance()
+            finally_body = self._parse_block()
+        return TryStmt(try_body, catches, finally_body, span=self._end_span(start))
+
+    def _parse_throw(self):
+        start = self._start_span()
+        self._expect_kw("throw")
+        expr = self._parse_expression()
+        self._skip_newlines()
+        return ThrowStmt(expr, span=self._end_span(start))
 
     def _parse_match(self) -> MatchStmt:
         start = self._start_span()

@@ -117,6 +117,14 @@ KEYWORDS = frozenset(
         "Self",
         "extends",
         "where",
+        "try",
+        "catch",
+        "throw",
+        "finally",
+        "len",
+        "range",
+        "assert",
+        "panic",
     }
 )
 
