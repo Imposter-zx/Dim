@@ -1,5 +1,5 @@
 # dim_mir_to_llvm.py — MIR to LLVM IR Codegen
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any, Tuple, Set
 from dim_mir import (
     MIRModule,
     MIRFunction,
@@ -44,6 +44,24 @@ from dim_types import (
 )
 
 
+# Mapping from Dim stdlib function names to runtime function names
+STDLIB_RUNTIME_MAP = {
+    "print": "dim_runtime_print_i32",
+    "println": "dim_runtime_println_str",
+    "len": "dim_runtime_str_len",
+    "abs": "dim_runtime_abs_i32",
+    "min": "dim_runtime_min_i32",
+    "max": "dim_runtime_max_i32",
+    "read_file": "dim_runtime_read_file",
+    "write_file": "dim_runtime_write_file",
+    "file_exists": "dim_runtime_file_exists",
+    "str_upper": "dim_runtime_str_to_upper",
+    "str_lower": "dim_runtime_str_to_lower",
+    "str_trim": "dim_runtime_str_trim",
+    "str_concat": "dim_runtime_str_concat",
+}
+
+
 class LLVMGenerator:
     def __init__(self):
         self._output: List[str] = []
@@ -51,6 +69,7 @@ class LLVMGenerator:
         self._block_names: Dict[int, str] = {}
         self._const_counter = 0
         self._current_fn: Optional[MIRFunction] = None
+        self._stdlib_fn_names: Set[str] = set(STDLIB_RUNTIME_MAP.keys())
 
     def generate(self, module: MIRModule) -> str:
         self._output = [
@@ -59,8 +78,43 @@ class LLVMGenerator:
             'target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"',
             "",
             "; Runtime declarations",
+            "; AI/ML runtime",
             "declare i8* @dim_runtime_prompt_call(i8*, i8*, i1)",
+            "",
+            "; I/O runtime",
             "declare void @dim_runtime_print_i32(i32)",
+            "declare void @dim_runtime_print_i64(i64)",
+            "declare void @dim_runtime_print_f32(float)",
+            "declare void @dim_runtime_print_f64(double)",
+            "declare void @dim_runtime_print_bool(i8)",
+            "declare void @dim_runtime_print_str(i8*)",
+            "declare void @dim_runtime_println_str(i8*)",
+            "",
+            "; String runtime",
+            "declare i32 @dim_runtime_str_len(i8*)",
+            "declare i8* @dim_runtime_str_concat(i8*, i8*)",
+            "declare i8* @dim_runtime_str_substring(i8*, i32, i32)",
+            "declare i8* @dim_runtime_str_to_upper(i8*)",
+            "declare i8* @dim_runtime_str_to_lower(i8*)",
+            "declare i8* @dim_runtime_str_trim(i8*)",
+            "",
+            "; File I/O runtime",
+            "declare i8* @dim_runtime_read_file(i8*)",
+            "declare void @dim_runtime_write_file(i8*, i8*)",
+            "declare i8 @dim_runtime_file_exists(i8*)",
+            "",
+            "; Memory runtime",
+            "declare i8* @dim_alloc(i64)",
+            "declare i8* @dim_alloc_array(i64, i64)",
+            "declare void @dim_dealloc(i8*)",
+            "declare i8* @dim_realloc(i8*, i64)",
+            "",
+            "; Math runtime",
+            "declare i32 @dim_runtime_abs_i32(i32)",
+            "declare i32 @dim_runtime_min_i32(i32, i32)",
+            "declare i32 @dim_runtime_max_i32(i32, i32)",
+            "",
+            "; Panic",
             "declare void @dim_runtime_panic(i8*)",
             "",
         ]
@@ -176,6 +230,7 @@ class LLVMGenerator:
                 if isinstance(term.callee, str)
                 else self._op_to_llvm(term.callee)
             )
+            callee_str = STDLIB_RUNTIME_MAP.get(callee_str, callee_str)
             ret_llty = self._type_to_llvm(term.dest.local.ty) if term.dest else "void"
             if term.dest:
                 dest_name = self._place_to_llvm(term.dest)

@@ -1034,6 +1034,74 @@ def test_tc_import():
     assert_no_errors(sem.diag)
 
 
+@test("Parser: parses enum variant without args", "parser")
+def test_parse_enum_variant():
+    from dim_ast import EnumVariant
+
+    code = """enum Result:
+    Ok
+    Err
+
+fn f():
+    let x = Result.Ok
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[1]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, EnumVariant)
+    assert let_stmt.value.enum_name == "Result"
+    assert let_stmt.value.variant_name == "Ok"
+
+
+@test("Parser: parses enum variant with args", "parser")
+def test_parse_enum_variant_args():
+    from dim_ast import EnumVariant
+
+    code = """enum Result:
+    Ok(i32)
+    Err(str)
+
+fn f():
+    let x = Result.Ok(42)
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    fn = ast.statements[1]
+    let_stmt = fn.body[0]
+    assert isinstance(let_stmt.value, EnumVariant)
+    assert let_stmt.value.enum_name == "Result"
+    assert let_stmt.value.variant_name == "Ok"
+    assert len(let_stmt.value.args) == 1
+
+
+@test("TypeChecker: enum variant type checks", "typecheck")
+def test_tc_enum_variant():
+    code = """enum Result:
+    Ok(i32)
+    Err(str)
+
+fn f():
+    let x = Result.Ok(42)
+    let y = Result.Err("error")
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("TypeChecker: string methods type check", "typecheck")
+def test_tc_string_methods():
+    code = """fn f():
+    let s = "hello"
+    let u = s.upper
+    let l = s.lower
+    let t = s.trim
+    let arr = s.split
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

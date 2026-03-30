@@ -4,6 +4,30 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.5.0] - 2026-03-30
+
+### Added
+- **Runtime Library**: `runtime/dim_runtime.c`
+  - Memory allocation: malloc, calloc, free, realloc
+  - I/O operations: print_i32, print_str, println_str
+  - String operations: len, concat, substring, to_upper, to_lower, trim
+  - File I/O: read_file, write_file, file_exists
+  - Math functions: abs_i32, min_i32, max_i32
+- **Enum Variant Handling**: `Result.Ok(value)` syntax
+  - `EnumVariant` AST node for enum variant construction
+  - Parser support for `Enum.Variant` and `Enum.Variant(args)`
+  - Type checking for enum variant arguments
+- **String Methods**: `.upper()`, `.lower()`, `.trim()`, `.strip()`, `.split()`
+- **Code Formatter**: `dim fmt` command
+  - `dim_formatter.py`: Formats Dim source code
+  - Configurable indent size
+  - Consistent formatting for functions, structs, enums, etc.
+- **4 new tests** (65 total tests)
+
+### Changed
+- LLVM codegen: Extended runtime declarations
+- Type checker: Added string method type inference
+
 ## [0.4.0] - 2026-03-29
 
 ### Added
@@ -12,11 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   - Standard library modules in `std/` directory
   - `std/io.dim`: print, println, input, read_file, write_file, file_exists
   - `std/vec.dim`: push, pop, get, set, slice, reverse, sort, contains
-- **4 new tests** (61 → 65 tests)
-  - Import statement parsing
-  - Import with alias
-  - Import module resolution
-  - Import type checking
+- **4 new tests** (61 tests)
 
 ### Changed
 - `TypeChecker` and `SemanticAnalyzer` now accept `module_resolver` parameter

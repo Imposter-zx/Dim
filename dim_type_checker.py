@@ -42,6 +42,7 @@ from dim_ast import (
     BreakStmt,
     ContinueStmt,
     ImportStmt,
+    EnumVariant,
 )
 from dim_types import (
     Type,
@@ -486,6 +487,29 @@ class TypeChecker:
             )
             return UnknownType()
 
+        if isinstance(expr, EnumVariant):
+            enum_def = self._enums.get(expr.enum_name)
+            if enum_def:
+                variant_types = None
+                for vname, vtypes in enum_def.variants:
+                    if vname == expr.variant_name:
+                        variant_types = vtypes
+                        break
+                if variant_types is None:
+                    self.diag.error(
+                        "E0020",
+                        f"Enum `{expr.enum_name}` has no variant `{expr.variant_name}`",
+                        expr.span,
+                    )
+                    return UnknownType()
+                if expr.args and variant_types:
+                    for arg, expected_ty in zip(expr.args, variant_types):
+                        arg_ty = self.infer(arg)
+                        self.env.unify(arg_ty, expected_ty, arg.span)
+                return EnumType(expr.enum_name, {})
+            self.diag.error("E0020", f"Undefined enum `{expr.enum_name}`", expr.span)
+            return UnknownType()
+
         if isinstance(expr, MemberAccess):
             obj_ty = self.infer(expr.expr)
             if isinstance(obj_ty, StructType):
@@ -499,6 +523,10 @@ class TypeChecker:
             elif isinstance(obj_ty, GenericType) and obj_ty.name == "str":
                 if expr.member == "len":
                     return I32
+                elif expr.member in ("upper", "lower", "trim", "strip"):
+                    return STR
+                elif expr.member == "split":
+                    return TensorType(STR, [])
             elif isinstance(obj_ty, TensorType):
                 if expr.member == "len":
                     return I32

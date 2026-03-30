@@ -104,12 +104,41 @@ class Parser:
         start = self._start_span()
         stmts: List[Statement] = []
         self._skip_newlines()
+        tokens_backup = self.tokens
+        pos_backup = self.pos
+        self._collect_type_names()
+        self.tokens = tokens_backup
+        self.pos = pos_backup
+        self._skip_newlines()
         while not self._check(TokenType.EOF):
             s = self._parse_top_level()
             if s:
                 stmts.append(s)
             self._skip_newlines()
         return Program(stmts, span=self._end_span(start))
+
+    def _collect_type_names(self):
+        depth = 0
+        while not self._check(TokenType.EOF):
+            if self._check(TokenType.INDENT):
+                depth += 1
+                self._advance()
+            elif self._check(TokenType.DEDENT):
+                depth -= 1
+                self._advance()
+            elif depth == 0:
+                if self._check_kw("struct"):
+                    self._advance()
+                    if self._check(TokenType.IDENTIFIER):
+                        self._struct_names.add(self._advance().value)
+                elif self._check_kw("enum"):
+                    self._advance()
+                    if self._check(TokenType.IDENTIFIER):
+                        self._enum_names.add(self._advance().value)
+                else:
+                    self._advance()
+            else:
+                self._advance()
 
     def _parse_top_level(self) -> Optional[Statement]:
         self._skip_newlines()
@@ -438,6 +467,7 @@ class Parser:
         start = self._start_span()
         self._expect_kw("enum")
         name = self._expect(TokenType.IDENTIFIER).value
+        self._enum_names.add(name)
         generics = self._parse_generic_params()
         self._expect(TokenType.COLON)
         self._skip_newlines()
@@ -452,7 +482,15 @@ class Parser:
             if self._check(TokenType.LPAREN):
                 self._advance()
                 while not self._check(TokenType.RPAREN):
-                    vtypes.append(self._parse_type())
+                    if self._check(TokenType.IDENTIFIER):
+                        var_name = self._advance().value
+                        if self._check(TokenType.COLON):
+                            self._advance()
+                            vtypes.append(self._parse_type())
+                        else:
+                            vtypes.append(self._parse_type())
+                    else:
+                        vtypes.append(self._parse_type())
                     if not self._match(TokenType.COMMA):
                         break
                 self._expect(TokenType.RPAREN)
@@ -773,7 +811,21 @@ class Parser:
             elif self._check(TokenType.DOT):
                 self._advance()
                 member = self._expect(TokenType.IDENTIFIER).value
-                if self._check(TokenType.LPAREN):
+                if isinstance(expr, Identifier) and expr.name in self._enum_names:
+                    if self._check(TokenType.LPAREN):
+                        self._advance()
+                        args = []
+                        while not self._check(TokenType.RPAREN) and not self._check(
+                            TokenType.EOF
+                        ):
+                            args.append(self._parse_expression())
+                            if not self._match(TokenType.COMMA):
+                                break
+                        self._expect(TokenType.RPAREN)
+                        expr = EnumVariant(expr.name, member, args, span=expr.span)
+                    else:
+                        expr = EnumVariant(expr.name, member, [], span=expr.span)
+                elif self._check(TokenType.LPAREN):
                     self._advance()
                     args = []
                     while not self._check(TokenType.RPAREN) and not self._check(

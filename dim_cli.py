@@ -210,6 +210,15 @@ def cmd_test(args):
     sys.exit(0 if ok else 1)
 
 
+def cmd_fmt(args):
+    """Format a .dim file."""
+    from dim_formatter import format_file
+
+    output = getattr(args, "output", None)
+    indent = getattr(args, "indent", 4)
+    format_file(args.file, output, indent)
+
+
 def _print_ast(node, indent: int = 0):
     from dim_ast import Node
 
@@ -285,6 +294,17 @@ def main():
     p_test = sub.add_parser("test", help="Run the compiler test suite")
     p_test.add_argument("--tag", default=None, help="Filter tests by tag")
     p_test.set_defaults(func=cmd_test)
+
+    # fmt
+    p_fmt = sub.add_parser("fmt", help="Format a .dim file")
+    p_fmt.add_argument("file")
+    p_fmt.add_argument(
+        "-o", "--output", default=None, help="Output file (default: stdout)"
+    )
+    p_fmt.add_argument(
+        "-i", "--indent", type=int, default=4, help="Indent size (default: 4)"
+    )
+    p_fmt.set_defaults(func=cmd_fmt)
 
     args = parser.parse_args()
     if not args.command:

@@ -125,6 +125,14 @@ class StructConstruct(Expression):
 
 
 @dataclass
+class EnumVariant(Expression):
+    enum_name: str
+    variant_name: str
+    args: List[Tuple] = field(default_factory=list)
+    span: Optional[Span] = None
+
+
+@dataclass
 class TensorExpr(Expression):
     dtype: str
     shape: List[int]
