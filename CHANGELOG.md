@@ -4,7 +4,71 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.5.0] - 2026-03-30
+## [0.5.0] - 2026-03-31
+
+### Added
+- **WASM Compilation**: `dim_wasm_codegen.py`
+  - Compile Dim programs to WebAssembly (wasm32, wasm64 targets)
+  - `runtime/dim_runtime_wasm.c`: WASM runtime with linear memory
+- **LSP Server**: `dim_lsp.py`
+  - Language Server Protocol implementation
+  - Diagnostics, completions, hover, go-to-definition
+  - Works with VS Code, Neovim, and other LSP clients
+- **REPL**: `dim_repl.py`
+  - Interactive Read-Eval-Print Loop
+  - Command history, environment inspection
+- **Debugger**: `dim_debugger.py`
+  - Breakpoint management
+  - Step-through debugging, variable inspection
+- **Package Manager**: `dim_pkg.py`
+  - Project initialization (`dim pkg init`)
+  - Dependency management (`dim pkg add/remove`)
+  - Registry support for package discovery
+  - Local package caching
+- **Build System**: `dim_build.py`
+  - Project scaffolding (`dim new`)
+  - Build targets (native, release, wasm)
+  - Build and run (`dim run`)
+- **Test Framework**: `dim_test.py`
+  - Auto-discover test functions (`test_*`)
+  - Run tests with filters
+  - Test results reporting
+- **Macro System**: `dim_macro.py`
+  - Built-in macros: debug, todo, unimplemented
+  - Macro expansion framework
+- **Memory Management**:
+  - Reference counting: `dim_alloc_ref`, `dim_inc_ref`, `dim_dec_ref`
+  - Simple GC: `dim_gc_collect`, `dim_gc_register_root`
+- **Concurrency**:
+  - Thread pool: `dim_thread_pool_init`, `dim_thread_pool_submit`
+  - Async/Futures: `dim_future_new`, `dim_future_await`, `dim_future_resolve`
+- **Runtime Library**: `runtime/dim_runtime.c`
+  - Math: sin, cos, tan, sqrt, pow, log, log10, exp, floor, ceil, round, fabs, PI, E
+  - String: contains, starts_with, ends_with, index_of, replace, split, join, repeat
+  - File I/O: read_file, write_file, file_exists, append
+- **Standard Library Modules**:
+  - `std/math.dim`: Full math functions
+  - `std/str.dim`: String utilities
+  - `std/file.dim`: File operations
+  - `std/json.dim`: JSON parsing
+- **New CLI Commands**:
+  - `dim new <name>`: Create new project
+  - `dim run [file]`: Build and run
+  - `dim pkg <cmd>`: Package management
+  - `dim bench`: Benchmark runner (stub)
+- **Error Recovery**: Parser synchronization points
+- **9 new tests** (70 total tests)
+
+### Changed
+- LLVM codegen: Extended runtime declarations for math, string, memory, concurrency
+- CLI: Added new commands for pkg, run, new, bench
+- Type checker: Added generics and traits support
+
+### Fixed
+- String method codegen: Proper RuntimeCallRValue handling
+- Parser error recovery: Skip to statement boundary
+
+## [0.4.0] - 2026-03-29
 
 ### Added
 - **Runtime Library**: `runtime/dim_runtime.c`

@@ -210,6 +210,46 @@ def cmd_test(args):
     sys.exit(0 if ok else 1)
 
 
+def cmd_pkg(args):
+    """Package manager commands."""
+    from dim_pkg import run_pkg
+
+    run_pkg(args.subargs)
+
+
+def cmd_run(args):
+    """Build and run a .dim file."""
+    from dim_build import BuildSystem
+
+    project_path = os.path.dirname(os.path.abspath(args.file)) or os.getcwd()
+    builder = BuildSystem(project_path)
+    builder.config.main = os.path.basename(args.file)
+    success = builder.run(args.args)
+    sys.exit(0 if success else 1)
+
+
+def cmd_new(args):
+    """Create a new Dim project."""
+    from dim_build import BuildSystem
+
+    project_path = os.path.join(os.getcwd(), args.name)
+    if os.path.exists(project_path):
+        print(f"error: directory '{args.name}' already exists")
+        sys.exit(1)
+    os.makedirs(project_path)
+    builder = BuildSystem(project_path)
+    builder.init(args.name, args.main or "main.dim")
+    print(f"\nCreated project '{args.name}'")
+    print(f"  cd {args.name}")
+    print(f"  dim run {args.main or 'main.dim'}")
+
+
+def cmd_bench(args):
+    """Run benchmarks."""
+    print("Benchmark functionality coming soon...")
+    sys.exit(0)
+
+
 def cmd_fmt(args):
     """Format a .dim file."""
     from dim_formatter import format_file
@@ -294,6 +334,28 @@ def main():
     p_test = sub.add_parser("test", help="Run the compiler test suite")
     p_test.add_argument("--tag", default=None, help="Filter tests by tag")
     p_test.set_defaults(func=cmd_test)
+
+    # pkg
+    p_pkg = sub.add_parser("pkg", help="Package manager")
+    p_pkg.add_argument("subargs", nargs="*", default=[], help="Package subcommand")
+    p_pkg.set_defaults(func=cmd_pkg)
+
+    # run
+    p_run = sub.add_parser("run", help="Build and run a .dim file")
+    p_run.add_argument("file", nargs="?", default=None, help=".dim file to run")
+    p_run.add_argument("args", nargs="*", default=[], help="Arguments to pass")
+    p_run.set_defaults(func=cmd_run)
+
+    # new
+    p_new = sub.add_parser("new", help="Create a new Dim project")
+    p_new.add_argument("name", help="Project name")
+    p_new.add_argument("-m", "--main", default=None, help="Main file name")
+    p_new.set_defaults(func=cmd_new)
+
+    # bench
+    p_bench = sub.add_parser("bench", help="Run benchmarks")
+    p_bench.add_argument("file", help="Benchmark file")
+    p_bench.set_defaults(func=cmd_bench)
 
     # fmt
     p_fmt = sub.add_parser("fmt", help="Format a .dim file")

@@ -1,0 +1,31 @@
+# std/file.dim — File I/O utilities for Dim
+
+fn read(path: str) -> str:
+    return ""
+
+fn write(path: str, content: str) -> unit:
+    return none
+
+fn append(path: str, content: str) -> unit:
+    return none
+
+fn exists(path: str) -> bool:
+    return false
+
+fn is_file(path: str) -> bool:
+    return false
+
+fn is_dir(path: str) -> bool:
+    return false
+
+fn size(path: str) -> i64:
+    return 0
+
+fn remove(path: str) -> unit:
+    return none
+
+fn rename(old_path: str, new_path: str) -> unit:
+    return none
+
+fn copy(src: str, dest: str) -> unit:
+    return none

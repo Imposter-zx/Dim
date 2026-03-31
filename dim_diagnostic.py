@@ -10,42 +10,43 @@ from dim_token import Span
 
 
 class Severity(Enum):
-    ERROR   = auto()
+    ERROR = auto()
     WARNING = auto()
-    NOTE    = auto()
-    HINT    = auto()
+    NOTE = auto()
+    HINT = auto()
 
 
 # ANSI colour codes (gracefully no-op on Windows without VT support)
-_RESET  = "\033[0m"
-_BOLD   = "\033[1m"
-_RED    = "\033[31m"
+_RESET = "\033[0m"
+_BOLD = "\033[1m"
+_RED = "\033[31m"
 _YELLOW = "\033[33m"
-_CYAN   = "\033[36m"
-_GREEN  = "\033[32m"
-_WHITE  = "\033[97m"
+_CYAN = "\033[36m"
+_GREEN = "\033[32m"
+_WHITE = "\033[97m"
 
 _SEV_COLOR = {
-    Severity.ERROR:   _RED,
+    Severity.ERROR: _RED,
     Severity.WARNING: _YELLOW,
-    Severity.NOTE:    _CYAN,
-    Severity.HINT:    _GREEN,
+    Severity.NOTE: _CYAN,
+    Severity.HINT: _GREEN,
 }
 
 _SEV_LABEL = {
-    Severity.ERROR:   "error",
+    Severity.ERROR: "error",
     Severity.WARNING: "warning",
-    Severity.NOTE:    "note",
-    Severity.HINT:    "hint",
+    Severity.NOTE: "note",
+    Severity.HINT: "hint",
 }
 
 
 @dataclass
 class Label:
     """An annotated source region inside a diagnostic."""
+
     span: Span
     message: str
-    primary: bool = True   # True → ^^^ underlining; False → --- underlining
+    primary: bool = True  # True → ^^^ underlining; False → --- underlining
 
 
 @dataclass
@@ -60,12 +61,13 @@ class Diagnostic:
            |             ^^^ undefined variable `foo`
         hint: did you mean `for`?
     """
+
     severity: Severity
-    code: str                        # e.g. "E0001"
-    message: str                     # Main human-readable message
+    code: str  # e.g. "E0001"
+    message: str  # Main human-readable message
     labels: List[Label] = field(default_factory=list)
-    notes: List[str]   = field(default_factory=list)
-    hints: List[str]   = field(default_factory=list)
+    notes: List[str] = field(default_factory=list)
+    hints: List[str] = field(default_factory=list)
 
     # Optionally attach the full source so we can render snippets
     _source_lines: Optional[List[str]] = field(default=None, repr=False)
@@ -77,8 +79,8 @@ class Diagnostic:
     def render(self, color: bool = True) -> str:
         lines: List[str] = []
         sev_col = _SEV_COLOR[self.severity] if color else ""
-        reset   = _RESET if color else ""
-        bold    = _BOLD  if color else ""
+        reset = _RESET if color else ""
+        bold = _BOLD if color else ""
 
         # --- Header line ---
         sev_label = _SEV_LABEL[self.severity]
@@ -92,22 +94,24 @@ class Diagnostic:
             if sp.line_start == 0:
                 continue
             arrow_col = _CYAN if color else ""
-            lines.append(f"  {arrow_col}-->{reset} {sp.file}:{sp.line_start}:{sp.col_start}")
+            lines.append(
+                f"  {arrow_col}-->{reset} {sp.file}:{sp.line_start}:{sp.col_start}"
+            )
 
             if self._source_lines and 0 < sp.line_start <= len(self._source_lines):
                 src_line = self._source_lines[sp.line_start - 1]
                 line_num = str(sp.line_start)
-                gutter   = " " * len(line_num)
+                gutter = " " * len(line_num)
                 lines.append(f"   {arrow_col}{gutter} |{reset}")
                 lines.append(f"   {arrow_col}{line_num} |{reset} {src_line}")
 
                 # Underline
                 col_s = sp.col_start - 1  # zero-indexed
-                col_e = sp.col_end   - 1
+                col_e = sp.col_end - 1
                 length = max(1, col_e - col_s)
                 under_char = "^" if label.primary else "-"
-                under_col  = sev_col if label.primary else _CYAN if color else ""
-                underline  = " " * col_s + under_char * length
+                under_col = sev_col if label.primary else _CYAN if color else ""
+                underline = " " * col_s + under_char * length
                 lines.append(
                     f"   {arrow_col}{gutter} |{reset} "
                     f"{under_col}{underline} {label.message}{reset}"
@@ -142,9 +146,13 @@ class DiagnosticBag:
 
     # ── Emit helpers ─────────────────────────────────────────────────────────
 
-    def error(self, code: str, message: str,
-              span: Optional[Span] = None,
-              hints: Optional[List[str]] = None) -> Diagnostic:
+    def error(
+        self,
+        code: str,
+        message: str,
+        span: Optional[Span] = None,
+        hints: Optional[List[str]] = None,
+    ) -> Diagnostic:
         d = Diagnostic(
             severity=Severity.ERROR,
             code=code,
@@ -158,9 +166,13 @@ class DiagnosticBag:
         self._diags.append(d)
         return d
 
-    def warning(self, code: str, message: str,
-                span: Optional[Span] = None,
-                hints: Optional[List[str]] = None) -> Diagnostic:
+    def warning(
+        self,
+        code: str,
+        message: str,
+        span: Optional[Span] = None,
+        hints: Optional[List[str]] = None,
+    ) -> Diagnostic:
         d = Diagnostic(
             severity=Severity.WARNING,
             code=code,
@@ -194,6 +206,7 @@ class DiagnosticBag:
     def flush(self, color: bool = True) -> None:
         """Print all diagnostics to stderr and clear the bag."""
         import sys
+
         for d in self._diags:
             print(d.render(color=color), file=sys.stderr)
         self._diags.clear()
@@ -215,6 +228,8 @@ ERROR_CODES = {
     "E0011": "Expected expression",
     "E0012": "Mismatched parentheses",
     "E0013": "Missing colon after block header",
+    "E0014": "Unexpected end of file",
+    "E0015": "Invalid statement",
     # Name resolution
     "E0020": "Undefined variable",
     "E0021": "Undefined function",

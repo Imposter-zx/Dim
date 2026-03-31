@@ -1,0 +1,49 @@
+# examples/test_example.dim — Test Framework Example
+#
+# Demonstrates how to write tests in Dim using the test framework.
+
+fn add(a: i32, b: i32) -> i32:
+    return a + b
+
+fn test_add_basic():
+    result = add(2, 3)
+    if result != 5 {
+        panic("add(2, 3) should be 5, got " + result.to_string())
+    }
+
+fn test_add_negative():
+    result = add(-1, 1)
+    if result != 0 {
+        panic("add(-1, 1) should be 0")
+    }
+
+fn test_add_zero():
+    result = add(0, 0)
+    if result != 0 {
+        panic("add(0, 0) should be 0")
+    }
+
+fn max(a: i32, b: i32) -> i32:
+    if a > b { return a }
+    return b
+
+fn test_max_first():
+    result = max(5, 3)
+    if result != 5 {
+        panic("max(5, 3) should be 5")
+    }
+
+fn test_max_second():
+    result = max(2, 10)
+    if result != 10 {
+        panic("max(2, 10) should be 10")
+    }
+
+fn main() -> unit:
+    test_add_basic()
+    test_add_negative()
+    test_add_zero()
+    test_max_first()
+    test_max_second()
+    println("All tests passed!")
+    return none

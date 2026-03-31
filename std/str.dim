@@ -1,0 +1,46 @@
+# std/str.dim — String utilities for Dim
+
+fn len(s: str) -> i32:
+    return 0
+
+fn concat(a: str, b: str) -> str:
+    return ""
+
+fn slice(s: str, start: i32, end: i32) -> str:
+    return ""
+
+fn contains(s: str, sub: str) -> bool:
+    return false
+
+fn starts_with(s: str, prefix: str) -> bool:
+    return false
+
+fn ends_with(s: str, suffix: str) -> bool:
+    return false
+
+fn index_of(s: str, sub: str) -> i32:
+    return -1
+
+fn replace(s: str, old: str, new: str) -> str:
+    return ""
+
+fn split(s: str, delim: str) -> [str]:
+    return []
+
+fn join(arr: [str], sep: str) -> str:
+    return ""
+
+fn to_upper(s: str) -> str:
+    return s.upper()
+
+fn to_lower(s: str) -> str:
+    return s.lower()
+
+fn trim(s: str) -> str:
+    return s.trim()
+
+fn repeat(s: str, count: i32) -> str:
+    return ""
+
+fn is_empty(s: str) -> bool:
+    return s.len() == 0

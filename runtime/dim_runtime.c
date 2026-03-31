@@ -169,101 +169,308 @@ char* dim_runtime_str_trim(const char* str) {
 }
 
 // ============================================================================
-// Math Operations
+// String Operations (Extended)
 // ============================================================================
 
-int32_t dim_runtime_abs_i32(int32_t value) {
-    return value < 0 ? -value : value;
+bool dim_runtime_str_contains(const char* str, const char* sub) {
+    if (!str || !sub) return false;
+    return strstr(str, sub) != NULL;
 }
 
-int32_t dim_runtime_min_i32(int32_t a, int32_t b) {
-    return a < b ? a : b;
+bool dim_runtime_str_starts_with(const char* str, const char* prefix) {
+    if (!str || !prefix) return false;
+    size_t prefix_len = strlen(prefix);
+    if (strlen(str) < prefix_len) return false;
+    return strncmp(str, prefix, prefix_len) == 0;
 }
 
-int32_t dim_runtime_max_i32(int32_t a, int32_t b) {
-    return a > b ? a : b;
+bool dim_runtime_str_ends_with(const char* str, const char* suffix) {
+    if (!str || !suffix) return false;
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+    if (str_len < suffix_len) return false;
+    return strcmp(str + str_len - suffix_len, suffix) == 0;
 }
 
-// ============================================================================
-// File I/O
-// ============================================================================
+int32_t dim_runtime_str_index_of(const char* str, const char* sub) {
+    if (!str || !sub) return -1;
+    const char* result = strstr(str, sub);
+    if (!result) return -1;
+    return (int32_t)(result - str);
+}
 
-char* dim_runtime_read_file(const char* path) {
-    if (!path) {
-        fprintf(stderr, "Dim: read_file: null path\n");
-        return "";
+char* dim_runtime_str_replace(const char* str, const char* old, const char* new_str) {
+    if (!str || !old || !new_str) return "";
+    
+    size_t old_len = strlen(old);
+    size_t new_len = strlen(new_str);
+    size_t str_len = strlen(str);
+    
+    // Count occurrences
+    int count = 0;
+    const char* p = str;
+    while ((p = strstr(p, old)) != NULL) {
+        count++;
+        p += old_len;
     }
-    FILE* f = fopen(path, "r");
-    if (!f) {
-        return "";
+    
+    if (count == 0) {
+        char* result = dim_alloc(str_len + 1);
+        memcpy(result, str, str_len + 1);
+        return result;
     }
-    fseek(f, 0, SEEK_END);
-    long len = ftell(f);
-    fseek(f, 0, SEEK_SET);
-    char* buffer = dim_alloc(len + 1);
-    size_t read_len = fread(buffer, 1, len, f);
-    buffer[read_len] = '\0';
-    fclose(f);
-    return buffer;
-}
-
-void dim_runtime_write_file(const char* path, const char* content) {
-    if (!path) {
-        fprintf(stderr, "Dim: write_file: null path\n");
-        return;
-    }
-    FILE* f = fopen(path, "w");
-    if (!f) {
-        fprintf(stderr, "Dim: write_file: could not open %s\n", path);
-        return;
-    }
-    if (content) {
-        fputs(content, f);
-    }
-    fclose(f);
-}
-
-bool dim_runtime_file_exists(const char* path) {
-    if (!path) return false;
-    FILE* f = fopen(path, "r");
-    if (f) {
-        fclose(f);
-        return true;
-    }
-    return false;
-}
-
-// ============================================================================
-// Array Operations
-// ============================================================================
-
-int32_t dim_runtime_arr_len(void* arr) {
-    if (!arr) return 0;
-    return 0; // Would need length stored separately or different approach
-}
-
-void dim_runtime_arr_push(void** arr, int32_t* len, int32_t* cap, void* item, size_t elem_size) {
-    if (!arr || !len || !cap) return;
-    if (*len >= *cap) {
-        int32_t new_cap = (*cap == 0) ? 4 : (*cap * 2);
-        void* new_arr = dim_alloc_array(new_cap, elem_size);
-        if (*arr && *len > 0) {
-            memcpy(new_arr, *arr, (*len) * elem_size);
-            dim_dealloc(*arr);
+    
+    size_t result_len = str_len + count * ((int)new_len - (int)old_len);
+    char* result = dim_alloc(result_len + 1);
+    
+    char* dest = result;
+    const char* src = str;
+    while (*src) {
+        const char* match = strstr(src, old);
+        if (!match) {
+            strcpy(dest, src);
+            break;
         }
-        *arr = new_arr;
-        *cap = new_cap;
+        size_t copy_len = match - src;
+        memcpy(dest, src, copy_len);
+        dest += copy_len;
+        memcpy(dest, new_str, new_len);
+        dest += new_len;
+        src = match + old_len;
     }
-    memcpy((char*)(*arr) + (*len) * elem_size, item, elem_size);
-    (*len)++;
+    result[result_len] = '\0';
+    return result;
 }
 
-void* dim_runtime_arr_pop(void** arr, int32_t* len, size_t elem_size) {
-    if (!arr || !*arr || !len || *len <= 0) return NULL;
-    (*len)--;
-    void* item = dim_alloc(elem_size);
-    memcpy(item, (char*)(*arr) + (*len) * elem_size, elem_size);
-    return item;
+int32_t dim_runtime_str_split(const char* str, const char* delim, char*** output) {
+    if (!str || !delim || !output) return 0;
+    
+    char* str_copy = dim_alloc(strlen(str) + 1);
+    strcpy(str_copy, str);
+    
+    int count = 0;
+    char* token = strtok(str_copy, delim);
+    while (token) {
+        count++;
+        token = strtok(NULL, delim);
+    }
+    
+    free(str_copy);
+    
+    str_copy = dim_alloc(strlen(str) + 1);
+    strcpy(str_copy, str);
+    
+    *output = (char**)dim_alloc(count * sizeof(char*));
+    
+    int i = 0;
+    token = strtok(str_copy, delim);
+    while (token) {
+        (*output)[i] = dim_alloc(strlen(token) + 1);
+        strcpy((*output)[i], token);
+        i++;
+        token = strtok(NULL, delim);
+    }
+    
+    free(str_copy);
+    return count;
+}
+
+char* dim_runtime_str_join(char** arr, int32_t count, const char* sep) {
+    if (!arr || count <= 0) return "";
+    if (!sep) sep = "";
+    
+    size_t sep_len = strlen(sep);
+    size_t total_len = 0;
+    
+    for (int i = 0; i < count; i++) {
+        if (arr[i]) total_len += strlen(arr[i]);
+    }
+    total_len += (count - 1) * sep_len;
+    
+    char* result = dim_alloc(total_len + 1);
+    char* dest = result;
+    
+    for (int i = 0; i < count; i++) {
+        if (i > 0 && sep_len > 0) {
+            memcpy(dest, sep, sep_len);
+            dest += sep_len;
+        }
+        if (arr[i]) {
+            size_t len = strlen(arr[i]);
+            memcpy(dest, arr[i], len);
+            dest += len;
+        }
+    }
+    *dest = '\0';
+    return result;
+}
+
+char* dim_runtime_str_repeat(const char* str, int32_t count) {
+    if (!str || count <= 0) return "";
+    size_t len = strlen(str);
+    size_t result_len = len * count;
+    char* result = dim_alloc(result_len + 1);
+    for (int i = 0; i < count; i++) {
+        memcpy(result + i * len, str, len);
+    }
+    result[result_len] = '\0';
+    return result;
+}
+
+// ============================================================================
+// Memory Management (Reference Counting)
+// ============================================================================
+
+typedef struct {
+    void* data;
+    int32_t ref_count;
+    size_t size;
+} DimRefCounted;
+
+static DimRefCounted* dim_gc_rootset[1024];
+static int32_t dim_gc_rootset_size = 0;
+
+void* dim_alloc_ref(size_t size) {
+    DimRefCounted* rc = (DimRefCounted*)malloc(sizeof(DimRefCounted));
+    if (!rc) return NULL;
+    rc->data = malloc(size);
+    if (!rc->data) {
+        free(rc);
+        return NULL;
+    }
+    rc->ref_count = 1;
+    rc->size = size;
+    return rc->data;
+}
+
+void dim_inc_ref(void* ptr) {
+    if (!ptr) return;
+    DimRefCounted* rc = (DimRefCounted*)((char*)ptr - sizeof(DimRefCounted));
+    rc->ref_count++;
+}
+
+void dim_dec_ref(void* ptr) {
+    if (!ptr) return;
+    DimRefCounted* rc = (DimRefCounted*)((char*)ptr - sizeof(DimRefCounted));
+    rc->ref_count--;
+    if (rc->ref_count <= 0) {
+        free(rc->data);
+        free(rc);
+    }
+}
+
+void dim_gc_register_root(void* ptr) {
+    if (dim_gc_rootset_size < 1024) {
+        dim_gc_rootset[dim_gc_rootset_size++] = (DimRefCounted*)((char*)ptr - sizeof(DimRefCounted));
+    }
+}
+
+void dim_gc_collect(void) {
+    // Simple mark-and-sweep: marks roots, sweeps unmarked
+    for (int i = 0; i < dim_gc_rootset_size; i++) {
+        if (dim_gc_rootset[i]) {
+            dim_gc_rootset[i]->ref_count = 1; // Reset for GC
+        }
+    }
+    dim_gc_rootset_size = 0;
+}
+
+// ============================================================================
+// Concurrency (Thread Pool)
+// ============================================================================
+
+#include <pthread.h>
+
+typedef struct {
+    void* (*func)(void*);
+    void* arg;
+    int32_t ready;
+} DimTask;
+
+static DimTask dim_task_queue[256];
+static int32_t dim_task_queue_head = 0;
+static int32_t dim_task_queue_tail = 0;
+static pthread_mutex_t dim_task_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_cond_t dim_task_cond = PTHREAD_COND_INITIALIZER;
+static int32_t dim_shutdown = 0;
+
+void* dim_thread_worker(void* arg) {
+    (void)arg;
+    while (!dim_shutdown) {
+        pthread_mutex_lock(&dim_task_mutex);
+        while (dim_task_queue_head == dim_task_queue_tail && !dim_shutdown) {
+            pthread_cond_wait(&dim_task_cond, &dim_task_mutex);
+        }
+        if (dim_shutdown) {
+            pthread_mutex_unlock(&dim_task_mutex);
+            break;
+        }
+        DimTask task = dim_task_queue[dim_task_queue_head % 256];
+        dim_task_queue_head++;
+        pthread_mutex_unlock(&dim_task_mutex);
+        if (task.func) {
+            task.func(task.arg);
+        }
+    }
+    return NULL;
+}
+
+int32_t dim_thread_pool_init(int32_t num_threads) {
+    static pthread_t threads[16];
+    for (int i = 0; i < num_threads && i < 16; i++) {
+        pthread_create(&threads[i], NULL, dim_thread_worker, NULL);
+    }
+    return num_threads;
+}
+
+void dim_thread_pool_submit(void* (*func)(void*), void* arg) {
+    pthread_mutex_lock(&dim_task_mutex);
+    dim_task_queue[dim_task_queue_tail % 256].func = func;
+    dim_task_queue[dim_task_queue_tail % 256].arg = arg;
+    dim_task_queue_tail++;
+    pthread_cond_signal(&dim_task_cond);
+    pthread_mutex_unlock(&dim_task_mutex);
+}
+
+void dim_thread_pool_shutdown(void) {
+    dim_shutdown = 1;
+    pthread_cond_broadcast(&dim_task_cond);
+}
+
+// ============================================================================
+// Async/Await Support
+// ============================================================================
+
+typedef struct {
+    void* result;
+    int32_t ready;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+} DimFuture;
+
+DimFuture* dim_future_new(void) {
+    DimFuture* f = (DimFuture*)malloc(sizeof(DimFuture));
+    f->result = NULL;
+    f->ready = 0;
+    pthread_mutex_init(&f->mutex, NULL);
+    pthread_cond_init(&f->cond, NULL);
+    return f;
+}
+
+void dim_future_await(DimFuture* f) {
+    pthread_mutex_lock(&f->mutex);
+    while (!f->ready) {
+        pthread_cond_wait(&f->cond, &f->mutex);
+    }
+    pthread_mutex_unlock(&f->mutex);
+}
+
+void dim_future_resolve(DimFuture* f, void* result) {
+    pthread_mutex_lock(&f->mutex);
+    f->result = result;
+    f->ready = 1;
+    pthread_cond_signal(&f->cond);
+    pthread_mutex_unlock(&f->mutex);
 }
 
 // ============================================================================

@@ -1,0 +1,39 @@
+# std/json.dim — JSON utilities for Dim
+
+fn parse(s: str) -> JsonValue:
+    return JsonValue::Null
+
+fn stringify(v: JsonValue) -> str:
+    return ""
+
+fn stringify_pretty(v: JsonValue) -> str:
+    return ""
+
+enum JsonValue:
+    Null
+    Bool(bool)
+    Number(f64)
+    String(str)
+    Array([JsonValue])
+    Object([(str, JsonValue)])
+
+fn get_bool(v: JsonValue, key: str) -> bool:
+    return false
+
+fn get_number(v: JsonValue, key: str) -> f64:
+    return 0.0
+
+fn get_string(v: JsonValue, key: str) -> str:
+    return ""
+
+fn get_array(v: JsonValue, key: str) -> [JsonValue]:
+    return []
+
+fn get_object(v: JsonValue, key: str) -> [(str, JsonValue)]:
+    return []
+
+fn has_key(v: JsonValue, key: str) -> bool:
+    return false
+
+fn keys(v: JsonValue) -> [str]:
+    return []

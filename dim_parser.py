@@ -90,6 +90,26 @@ class Parser:
         while self._check(TokenType.NEWLINE):
             self._advance()
 
+    def _synchronize(self) -> None:
+        """Skip tokens until reaching a synchronization point."""
+        while self.pos < len(self.tokens):
+            tok = self._peek()
+            if tok.kind in (TokenType.NEWLINE, TokenType.EOF):
+                break
+            if tok.kind == TokenType.KEYWORD and tok.value in (
+                "fn",
+                "let",
+                "struct",
+                "enum",
+                "trait",
+                "impl",
+                "import",
+                "pub",
+            ):
+                break
+            self._advance()
+        self._skip_newlines()
+
     def _start_span(self) -> Span:
         return self._peek().span
 
@@ -969,4 +989,12 @@ class Parser:
         # Error recovery
         self.diag.error("E0011", f"Expected expression, found `{tok.value}`", tok.span)
         self._advance()
+
+        # Skip to next statement boundary for better recovery
+        while self.pos < len(self.tokens):
+            tok = self._peek()
+            if tok.kind in (TokenType.NEWLINE, TokenType.EOF, TokenType.RBRACE):
+                break
+            self._advance()
+
         return Literal(0, span=tok.span)

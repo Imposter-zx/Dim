@@ -1,0 +1,55 @@
+# examples/ffi.dim — Foreign Function Interface Examples in Dim
+#
+# Demonstrates calling C functions and using external libraries.
+
+foreign "libc.so" [
+    fn puts(msg: str) -> i32
+    fn rand() -> i32
+    fn srand(seed: u32) -> unit
+    fn time(ptr: *i64) -> i64
+]
+
+foreign "libm.so" [
+    fn sin(x: f64) -> f64
+    fn cos(x: f64) -> f64
+    fn sqrt(x: f64) -> f64
+    fn pow(x: f64, y: f64) -> f64
+    fn log(x: f64) -> f64
+    fn exp(x: f64) -> f64
+]
+
+use libc.puts
+use libc.rand
+use libc.srand
+use libc.time as ctime
+use libm.sin
+use libm.cos
+use libm.sqrt
+use libm.pow
+
+fn main() -> unit:
+    puts("Calling C functions from Dim!")
+    
+    srand(42)
+    for i in 0..5:
+        r = rand()
+        println("Random: " + r.to_string())
+    
+    angle = 3.14159 / 4.0
+    s = sin(angle)
+    c = cos(angle)
+    println("sin(π/4) = " + s.to_string())
+    println("cos(π/4) = " + c.to_string())
+    
+    num = 144.0
+    root = sqrt(num)
+    println("sqrt(144) = " + root.to_string())
+    
+    result = pow(2.0, 10.0)
+    println("2^10 = " + result.to_string())
+    
+    t = ctime(0)
+    println("Current time: " + t.to_string())
+    
+    println("FFI demo complete!")
+    return none

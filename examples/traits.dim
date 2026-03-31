@@ -1,0 +1,67 @@
+# examples/traits.dim — Trait and Generic Examples in Dim
+#
+# Demonstrates trait definitions, implementations, and generic constraints.
+
+trait Printable:
+    fn format(self) -> str
+
+trait Comparable<T>:
+    fn compare(self, other: T) -> i32
+
+struct Point:
+    x: f64
+    y: f64
+
+impl Printable for Point:
+    fn format(self) -> str:
+        return "(" + self.x.to_string() + ", " + self.y.to_string() + ")"
+
+impl Comparable<Point> for Point:
+    fn compare(self, other: Point) -> i32:
+        dx = self.x - other.x
+        dy = self.y - other.y
+        dist = (dx * dx + dy * dy).sqrt()
+        if dist < 1.0 { return -1 }
+        if dist > 1.0 { return 1 }
+        return 0
+
+struct Container<T>:
+    value: T
+
+impl<T> Printable for Container<T>:
+    fn format(self) -> str:
+        return "Container(" + self.value.to_string() + ")"
+
+fn print_all<T: Printable>(items: [T]) -> unit:
+    for item in items:
+        println(item.format())
+
+fn largest<T: Comparable<T>>(items: [T]) -> T:
+    result = items[0]
+    for i in 1..items.len():
+        if items[i].compare(result) > 0 {
+            result = items[i]
+        }
+    return result
+
+fn main() -> unit:
+    p1 = Point{x: 1.0, y: 2.0}
+    p2 = Point{x: 3.0, y: 4.0}
+    
+    println("Points:")
+    println(p1.format())
+    println(p2.format())
+    
+    comp = p1.compare(p2)
+    println("Comparison: " + comp.to_string())
+    
+    containers = [
+        Container{value: 42},
+        Container{value: 7},
+        Container{value: 100}
+    ]
+    
+    print_all(containers)
+    
+    println("Done!")
+    return none

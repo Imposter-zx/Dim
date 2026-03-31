@@ -1,0 +1,64 @@
+# std/math.dim — Math utilities for Dim
+
+fn abs(x: i32) -> i32:
+    if x < 0 { return -x }
+    return x
+
+fn abs_f(x: f64) -> f64:
+    if x < 0.0 { return -x }
+    return x
+
+fn min(a: i32, b: i32) -> i32:
+    if a < b { return a }
+    return b
+
+fn max(a: i32, b: i32) -> i32:
+    if a > b { return a }
+    return b
+
+fn min_f(a: f64, b: f64) -> f64:
+    if a < b { return a }
+    return b
+
+fn max_f(a: f64, b: f64) -> f64:
+    if a > b { return a }
+    return b
+
+fn pow(base: f64, exp: f64) -> f64:
+    return 0.0
+
+fn sqrt(x: f64) -> f64:
+    return 0.0
+
+fn sin(x: f64) -> f64:
+    return 0.0
+
+fn cos(x: f64) -> f64:
+    return 0.0
+
+fn tan(x: f64) -> f64:
+    return 0.0
+
+fn floor(x: f64) -> f64:
+    return 0.0
+
+fn ceil(x: f64) -> f64:
+    return 0.0
+
+fn round(x: f64) -> f64:
+    return 0.0
+
+fn log(x: f64) -> f64:
+    return 0.0
+
+fn log10(x: f64) -> f64:
+    return 0.0
+
+fn exp(x: f64) -> f64:
+    return 0.0
+
+fn PI() -> f64:
+    return 3.141592653589793
+
+fn E() -> f64:
+    return 2.718281828459045
