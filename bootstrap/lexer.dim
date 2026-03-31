@@ -1,0 +1,280 @@
+# bootstrap/lexer.dim — Lexer for Dim compiler
+#
+# Tokenizer that converts source text into tokens.
+
+import token
+
+struct Position:
+    line: i32
+    column: i32
+    index: i32
+
+struct Lexer:
+    source: str
+    pos: Position
+    tokens: [token.Token]
+    indent_stack: [i32]
+    current_indent: i32
+
+fn lexer_new(source: str) -> Lexer:
+    return Lexer{
+        source: source,
+        pos: Position{line: 1, column: 1, index: 0},
+        tokens: [],
+        indent_stack: [0],
+        current_indent: 0
+    }
+
+fn lexer_current_char(l: Lexer) -> str:
+    if l.pos.index >= l.source.len():
+        return ""
+    return l.source[l.pos.index: l.pos.index + 1]
+
+fn lexer_peek(l: Lexer, offset: i32) -> str:
+    idx = l.pos.index + offset
+    if idx >= l.source.len():
+        return ""
+    return l.source[idx: idx + 1]
+
+fn lexer_advance(l: &mut Lexer):
+    if l.pos.index < l.source.len():
+        c = l.source[l.pos.index: l.pos.index + 1]
+        if c == "\n":
+            l.pos.line = l.pos.line + 1
+            l.pos.column = 1
+        else:
+            l.pos.column = l.pos.column + 1
+        l.pos.index = l.pos.index + 1
+
+fn lexer_skip_whitespace(l: &mut Lexer):
+    while token.is_whitespace(lexer_current_char(l)) and lexer_current_char(l) != "\n":
+        lexer_advance(l)
+
+fn lexer_read_string(l: &mut Lexer) -> token.Token:
+    start_col = l.pos.column
+    lexer_advance(l)
+    value = ""
+    
+    while lexer_current_char(l) != "\"" and lexer_current_char(l) != "":
+        c = lexer_current_char(l)
+        if c == "\\":
+            lexer_advance(l)
+            esc = lexer_current_char(l)
+            match esc:
+                "n": value = value + "\n"
+                "t": value = value + "\t"
+                "\"": value = value + "\""
+                "\\": value = value + "\\"
+                _: value = value + esc
+        else:
+            value = value + c
+        lexer_advance(l)
+    
+    if lexer_current_char(l) == "\"":
+        lexer_advance(l)
+    
+    return token.Token{
+        kind: token.TokenKind.String,
+        value: value,
+        line: l.pos.line,
+        column: start_col
+    }
+
+fn lexer_read_number(l: &mut Lexer) -> token.Token:
+    start_col = l.pos.column
+    value = ""
+    has_dot = false
+    
+    while true:
+        c = lexer_current_char(l)
+        if token.is_digit(c):
+            value = value + c
+            lexer_advance(l)
+        else if c == "." and not has_dot:
+            has_dot = true
+            value = value + c
+            lexer_advance(l)
+        else:
+            break
+    
+    return token.Token{
+        kind: token.TokenKind.Number,
+        value: value,
+        line: l.pos.line,
+        column: start_col
+    }
+
+fn lexer_read_identifier(l: &mut Lexer) -> token.Token:
+    start_col = l.pos.column
+    value = ""
+    
+    while token.is_alphanumeric(lexer_current_char(l)):
+        value = value + lexer_current_char(l)
+        lexer_advance(l)
+    
+    if token.is_keyword(value):
+        return token.Token{
+            kind: token.keyword_to_token(value),
+            value: value,
+            line: l.pos.line,
+            column: start_col
+        }
+    
+    return token.Token{
+        kind: token.TokenKind.Identifier,
+        value: value,
+        line: l.pos.line,
+        column: start_col
+    }
+
+fn lexer_handle_newline(l: &mut Lexer):
+    lexer_advance(l)
+    l.tokens.push(token.Token{
+        kind: token.TokenKind.Newline,
+        value: "",
+        line: l.pos.line,
+        column: 1
+    })
+    
+    l.pos.column = 1
+    indent = 0
+    while token.is_whitespace(lexer_current_char(l)):
+        indent = indent + 1
+        lexer_advance(l)
+    
+    if lexer_current_char(l) != "\n" and lexer_current_char(l) != "":
+        if indent > l.current_indent:
+            l.tokens.push(token.Token{
+                kind: token.TokenKind.Indent,
+                value: "",
+                line: l.pos.line,
+                column: 1
+            })
+            l.indent_stack.push(indent)
+            l.current_indent = indent
+        else if indent < l.current_indent:
+            while l.indent_stack.len() > 1 and l.indent_stack.last() > indent:
+                l.tokens.push(token.Token{
+                    kind: token.TokenKind.Dedent,
+                    value: "",
+                    line: l.pos.line,
+                    column: 1
+                })
+                l.indent_stack.pop()
+            l.current_indent = l.indent_stack.last()
+
+fn lexer_read_operator(l: &mut Lexer) -> token.Token:
+    c = lexer_current_char(l)
+    kind = token.TokenKind.Error
+    value = c
+    
+    match c:
+        "+": kind = token.TokenKind.Plus
+        "-": 
+            if lexer_peek(l, 1) == ">" { 
+                kind = token.TokenKind.Arrow
+                value = "->"
+                lexer_advance(l)
+            } else {
+                kind = token.TokenKind.Minus
+            }
+        "*": kind = token.TokenKind.Star
+        "/": kind = token.TokenKind.Slash
+        "%": kind = token.TokenKind.Percent
+        "=": 
+            if lexer_peek(l, 1) == "=" {
+                kind = token.TokenKind.Neq
+                value = "=="
+                lexer_advance(l)
+            } else if lexer_peek(l, 1) == ">" {
+                kind = token.TokenKind.FatArrow
+                value = "=>"
+                lexer_advance(l)
+            } else {
+                kind = token.TokenKind.Eq
+            }
+        "<": 
+            if lexer_peek(l, 1) == "=" {
+                kind = token.TokenKind.Le
+                value = "<="
+                lexer_advance(l)
+            } else {
+                kind = token.TokenKind.Lt
+            }
+        ">":
+            if lexer_peek(l, 1) == "=" {
+                kind = token.TokenKind.Ge
+                value = ">="
+                lexer_advance(l)
+            } else {
+                kind = token.TokenKind.Gt
+            }
+        "&": kind = token.TokenKind.Amp
+        "|": kind = token.TokenKind.Pipe
+        "^": kind = token.TokenKind.Caret
+        "~": kind = token.TokenKind.Tilde
+        "(": kind = token.TokenKind.LParen
+        ")": kind = token.TokenKind.RParen
+        "[": kind = token.TokenKind.LBracket
+        "]": kind = token.TokenKind.RBracket
+        "{": kind = token.TokenKind.LBrace
+        "}": kind = token.TokenKind.RBrace
+        ":": kind = token.TokenKind.Colon
+        ";": kind = token.TokenKind.Semi
+        ".": kind = token.TokenKind.Dot
+        ",": kind = token.TokenKind.Comma
+        _: kind = token.TokenKind.Error
+    
+    lexer_advance(l)
+    
+    return token.Token{
+        kind: kind,
+        value: value,
+        line: l.pos.line,
+        column: l.pos.column
+    }
+
+fn lexer_tokenize(source: str) -> [token.Token]:
+    l = lexer_new(source)
+    
+    while l.pos.index < l.source.len():
+        c = lexer_current_char(l)
+        
+        if c == "\n":
+            lexer_handle_newline(&mut l)
+        else if token.is_whitespace(c):
+            lexer_skip_whitespace(&mut l)
+        else if c == "\"":
+            tok = lexer_read_string(&mut l)
+            l.tokens.push(tok)
+        else if token.is_digit(c):
+            tok = lexer_read_number(&mut l)
+            l.tokens.push(tok)
+        else if token.is_alpha(c):
+            tok = lexer_read_identifier(&mut l)
+            l.tokens.push(tok)
+        else:
+            tok = lexer_read_operator(&mut l)
+            l.tokens.push(tok)
+    
+    l.tokens.push(token.Token{
+        kind: token.TokenKind.EOF,
+        value: "",
+        line: l.pos.line,
+        column: l.pos.column
+    })
+    
+    return l.tokens
+
+fn lexer_main():
+    source = "fn main():\n    let x = 42\n    return x\n"
+    tokens = lexer_tokenize(source)
+    
+    for t in tokens:
+        if t.kind != token.TokenKind.Newline and t.kind != token.TokenKind.Indent and t.kind != token.TokenKind.Dedent {
+            print(token.token_to_string(t))
+    
+    print("Lexer bootstrap complete!")
+
+# Run if called directly
+lexer_main()

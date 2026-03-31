@@ -1,0 +1,145 @@
+# bootstrap/token.dim — Token types for Dim compiler
+#
+# Core token definitions for the self-hosting compiler.
+
+enum TokenKind:
+    Fn
+    Let
+    Mut
+    If
+    Else
+    While
+    For
+    In
+    Return
+    Break
+    Continue
+    Match
+    Struct
+    Enum
+    Trait
+    Impl
+    Async
+    Await
+    Prompt
+    Role
+    Output
+    Import
+    From
+    As
+    Pub
+    Try
+    Catch
+    Throw
+    Finally
+    Foreign
+    Use
+    Identifier
+    Number
+    String
+    True
+    False
+    LParen
+    RParen
+    LBracket
+    RBracket
+    LBrace
+    RBrace
+    Plus
+    Minus
+    Star
+    Slash
+    Percent
+    Eq
+    Neq
+    Lt
+    Le
+    Gt
+    Ge
+    Amp
+    Pipe
+    Caret
+    Tilde
+    Colon
+    Semi
+    Dot
+    Comma
+    Arrow
+    FatArrow
+    Newline
+    Indent
+    Dedent
+    EOF
+    Error
+
+struct Token:
+    kind: TokenKind
+    value: str
+    line: i32
+    column: i32
+
+fn token_kind_to_string(kind: TokenKind) -> str:
+    match kind:
+        TokenKind.Fn: return "fn"
+        TokenKind.Let: return "let"
+        TokenKind.Identifier: return "identifier"
+        TokenKind.Number: return "number"
+        TokenKind.String: return "string"
+        TokenKind.LParen: return "("
+        TokenKind.RParen: return ")"
+        TokenKind.EOF: return "<EOF>"
+        _: return "unknown"
+
+fn token_to_string(token: Token) -> str:
+    return token_kind_to_string(token.kind) + ":" + token.value
+
+fn is_keyword(s: str) -> bool:
+    keywords = [
+        "fn", "let", "mut", "if", "else", "while", "for", "in",
+        "return", "break", "continue", "match", "struct", "enum",
+        "trait", "impl", "async", "await", "prompt", "role",
+        "output", "import", "from", "as", "pub", "try", "catch",
+        "throw", "finally", "foreign", "use"
+    ]
+    for kw in keywords:
+        if s == kw { return true }
+    return false
+
+fn keyword_to_token(s: str) -> TokenKind:
+    match s:
+        "fn": return TokenKind.Fn
+        "let": return TokenKind.Let
+        "mut": return TokenKind.Mut
+        "if": return TokenKind.If
+        "else": return TokenKind.Else
+        "while": return TokenKind.While
+        "for": return TokenKind.For
+        "return": return TokenKind.Return
+        "struct": return TokenKind.Struct
+        "enum": return TokenKind.Enum
+        "trait": return TokenKind.Trait
+        "impl": return TokenKind.Impl
+        "async": return TokenKind.Async
+        "import": return TokenKind.Import
+        "pub": return TokenKind.Pub
+        "try": return TokenKind.Try
+        "catch": return TokenKind.Catch
+        "throw": return TokenKind.Throw
+        "foreign": return TokenKind.Foreign
+        "use": return TokenKind.Use
+        _: return TokenKind.Identifier
+
+fn is_whitespace(c: str) -> bool:
+    return c == " " or c == "\t" or c == "\r"
+
+fn is_newline(c: str) -> bool:
+    return c == "\n"
+
+fn is_digit(c: str) -> bool:
+    return c >= "0" and c <= "9"
+
+fn is_alpha(c: str) -> bool:
+    return (c >= "a" and c <= "z") or (c >= "A" and c <= "Z") or c == "_"
+
+fn is_alphanumeric(c: str) -> bool:
+    return is_alpha(c) or is_digit(c)

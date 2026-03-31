@@ -1,0 +1,155 @@
+# bootstrap/ast.dim — AST Node Definitions for Dim compiler
+#
+# Abstract Syntax Tree node types for the self-hosting compiler.
+
+import token
+
+enum ASTNodeType:
+    Program
+    Function
+    Struct
+    Enum
+    Trait
+    Impl
+    Let
+    Assign
+    Return
+    If
+    While
+    For
+    Match
+    Break
+    Continue
+    BinaryOp
+    UnaryOp
+    Call
+    Index
+    Field
+    Literal
+    Identifier
+    Block
+
+struct Identifier:
+    name: str
+    span: token.Token
+
+struct Param:
+    name: str
+    typ: str
+
+struct Field:
+    name: str
+    typ: str
+
+struct FunctionDef:
+    name: str
+    params: [Param]
+    return_type: str
+    body: [ASTNode]
+    is_async: bool
+
+struct StructDef:
+    name: str
+    fields: [Field]
+
+struct EnumDef:
+    name: str
+    variants: [str]
+
+struct TraitDef:
+    name: str
+    methods: [FunctionDef]
+
+struct ImplBlock:
+    trait_name: str
+    struct_name: str
+    methods: [FunctionDef]
+
+struct LetStmt:
+    name: str
+    mutable: bool
+    typ: str
+    value: ASTNode
+
+struct ReturnStmt:
+    value: ASTNode
+
+struct IfStmt:
+    condition: ASTNode
+    then_branch: [ASTNode]
+    else_branch: [ASTNode]
+
+struct WhileStmt:
+    condition: ASTNode
+    body: [ASTNode]
+
+struct ForStmt:
+    variable: str
+    iterable: ASTNode
+    body: [ASTNode]
+
+struct BinaryExpr:
+    left: ASTNode
+    op: str
+    right: ASTNode
+
+struct UnaryExpr:
+    op: str
+    operand: ASTNode
+
+struct CallExpr:
+    callee: ASTNode
+    args: [ASTNode]
+
+struct IndexExpr:
+    object: ASTNode
+    index: ASTNode
+
+struct FieldExpr:
+    object: ASTNode
+    field: str
+
+struct LiteralExpr:
+    value: str
+    lit_type: str
+
+struct ASTNode:
+    node_type: ASTNodeType
+    data: ASTNodeData
+    span: token.Token
+
+enum ASTNodeData:
+    Function(FunctionDef)
+    Struct(StructDef)
+    Enum(EnumDef)
+    Trait(TraitDef)
+    Impl(ImplBlock)
+    Let(LetStmt)
+    Return(ReturnStmt)
+    If(IfStmt)
+    While(WhileStmt)
+    For(ForStmt)
+    Binary(BinaryExpr)
+    Unary(UnaryExpr)
+    Call(CallExpr)
+    Index(IndexExpr)
+    Field(FieldExpr)
+    Literal(LiteralExpr)
+    Identifier(Identifier)
+    Block([ASTNode])
+
+fn ast_node_new(kind: ASTNodeType, data: ASTNodeData, span: token.Token) -> ASTNode:
+    return ASTNode{
+        node_type: kind,
+        data: data,
+        span: span
+    }
+
+fn ast_to_string(node: ASTNode) -> str:
+    match node.node_type:
+        ASTNodeType.Function: return "Function"
+        ASTNodeType.Struct: return "Struct"
+        ASTNodeType.Enum: return "Enum"
+        ASTNodeType.Literal: return "Literal"
+        ASTNodeType.Identifier: return "Identifier"
+        _: return "Node"
