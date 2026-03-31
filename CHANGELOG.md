@@ -4,7 +4,31 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [0.5.0] - 2026-03-31
+## [1.0.0] - 2026-03-31
+
+### Added
+- **Self-Hosting Compiler**: `bootstrap/` directory
+  - `bootstrap/token.dim`: Token types and utilities
+  - `bootstrap/lexer.dim`: Full tokenizer with INDENT/DEDENT
+  - `bootstrap/ast.dim`: AST node definitions
+  - `bootstrap/compiler.dim`: Main compiler entry point
+- All Phase 5-8 features now complete
+- Full self-hosting capability
+
+### Changed
+- Version bumped to v1.0.0
+- Status: Production ready
+
+### Features (All Phases Complete)
+- Phase 0: Lexer, Parser, AST
+- Phase 1: Types, MIR, Borrow Checker
+- Phase 2: LLVM codegen
+- Phase 3: Native/WASM
+- Phase 4: Package manager, LSP, REPL, Debugger
+- Phase 5: AI/LLM engine
+- Phase 6: Security (taint, capabilities)
+- Phase 7: Tooling (linter, bench, docs)
+- Phase 8: Self-hosting
 
 ### Added
 - **WASM Compilation**: `dim_wasm_codegen.py`

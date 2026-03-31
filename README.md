@@ -2,7 +2,7 @@
 
 **Dim** is a next-generation, statically-compiled programming language designed to bridge ergonomic developer experience with systems-level control — with **AI/ML**, **memory safety**, and **security** as first-class language features.
 
-> **Status:** v0.5.0 Production — Full compiler pipeline, stdlib, LSP, REPL, debugger, package manager
+> **Status:** v1.0 Production — Fully self-hosting compiler
 
 ---
 
@@ -280,10 +280,10 @@ dim/                      — Dim source root
 | 2     | LLVM IR codegen, function calls, @tool parsing            | ✅ Done |
 | 3     | Native binaries, WASM, full LLVM backend                  | ✅ Done |
 | 4     | Package manager, LSP, REPL, Debugger                      | ✅ Done |
-| 5     | AI/LLM engine (typed prompts, model adapters)            | 🔜     |
-| 6     | Security: taint analysis, capability model, Z3 contracts | 🔜     |
-| 7     | Tooling: linter, benchmark, documentation generator       | 🔜     |
-| 8     | Self-hosting, v1.0                                       | 🔜     |
+| 5     | AI/LLM engine (typed prompts, model adapters)            | ✅ Done |
+| 6     | Security: taint analysis, capability model, contracts   | ✅ Done |
+| 7     | Tooling: linter, benchmark, documentation generator       | ✅ Done |
+| 8     | Self-hosting (bootstrap/), v1.0                         | ✅ Done |
 
 ---
 
