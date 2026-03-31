@@ -246,8 +246,23 @@ def cmd_new(args):
 
 def cmd_bench(args):
     """Run benchmarks."""
-    print("Benchmark functionality coming soon...")
-    sys.exit(0)
+    from dim_bench import run_benchmarks
+
+    run_benchmarks(args.args if hasattr(args, "args") else [])
+
+
+def cmd_lint(args):
+    """Run linter on a .dim file."""
+    from dim_linter import run_linter
+
+    run_linter([args.file])
+
+
+def cmd_docs(args):
+    """Generate documentation for a .dim file."""
+    from dim_docs import run_docs
+
+    run_docs(args.args if hasattr(args, "args") else [])
 
 
 def cmd_fmt(args):
@@ -354,8 +369,20 @@ def main():
 
     # bench
     p_bench = sub.add_parser("bench", help="Run benchmarks")
-    p_bench.add_argument("file", help="Benchmark file")
+    p_bench.add_argument("file", nargs="?", default=None, help="Benchmark file")
+    p_bench.add_argument("args", nargs="*", default=[], help="Additional arguments")
     p_bench.set_defaults(func=cmd_bench)
+
+    # lint
+    p_lint = sub.add_parser("lint", help="Run linter on a .dim file")
+    p_lint.add_argument("file", help="File to lint")
+    p_lint.set_defaults(func=cmd_lint)
+
+    # docs
+    p_docs = sub.add_parser("docs", help="Generate documentation")
+    p_docs.add_argument("file", nargs="?", default=None, help="File to document")
+    p_docs.add_argument("args", nargs="*", default=[], help="Additional arguments")
+    p_docs.set_defaults(func=cmd_docs)
 
     # fmt
     p_fmt = sub.add_parser("fmt", help="Format a .dim file")
