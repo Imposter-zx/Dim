@@ -125,6 +125,8 @@ KEYWORDS = frozenset(
         "range",
         "assert",
         "panic",
+        "foreign",
+        "use",
     }
 )
 

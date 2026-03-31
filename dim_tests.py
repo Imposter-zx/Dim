@@ -1102,6 +1102,70 @@ def test_tc_string_methods():
     assert_no_errors(diag)
 
 
+@test("Parser: parses trait definition", "parser")
+def test_parse_trait():
+    from dim_ast import TraitDef
+
+    code = """trait Printable:
+    fn print() -> unit
+    fn format() -> str
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], TraitDef)
+    assert ast.statements[0].name == "Printable"
+    assert len(ast.statements[0].methods) == 2
+
+
+@test("TypeChecker: trait type checks", "typecheck")
+def test_tc_trait():
+    code = """trait Printable:
+    fn print() -> unit
+    fn format() -> str
+
+fn demo(t: Printable):
+    return t.format()
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
+@test("Parser: parses foreign declaration", "parser")
+def test_parse_foreign():
+    from dim_ast import ForeignDecl
+
+    code = """foreign printf(format: str) -> i32
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], ForeignDecl)
+    assert ast.statements[0].name == "printf"
+    assert len(ast.statements[0].params) == 1
+
+
+@test("Parser: parses use statement", "parser")
+def test_parse_use():
+    from dim_ast import UseStmt
+
+    code = """use std.io, std.vec as v
+"""
+    ast, diag = _parse(code)
+    assert_no_errors(diag)
+    assert isinstance(ast.statements[0], UseStmt)
+    assert len(ast.statements[0].items) == 2
+
+
+@test("TypeChecker: foreign declaration type checks", "typecheck")
+def test_tc_foreign():
+    code = """foreign printf(format: str) -> i32
+
+fn main():
+    let x = 1
+"""
+    ast, diag, ok = _type_check(code)
+    assert_no_errors(diag)
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

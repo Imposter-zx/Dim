@@ -60,6 +60,7 @@ from dim_mir import (
     BinOpRValue,
     UnOpRValue,
     TensorRValue,
+    RuntimeCallRValue,
     Borrow,
     Drop,
     Mutability,
@@ -459,6 +460,33 @@ class LoweringPass:
             return UseRValue(ConstOperand(I32, 0)), None
 
         if isinstance(expr, MemberAccess):
+            obj_ty = self.infer(expr.expr)
+            if hasattr(obj_ty, "name") and obj_ty.name == "str":
+                runtime_map = {
+                    "len": "dim_runtime_str_len",
+                    "upper": "dim_runtime_str_to_upper",
+                    "lower": "dim_runtime_str_to_lower",
+                    "trim": "dim_runtime_str_trim",
+                    "strip": "dim_runtime_str_trim",
+                    "split": "dim_runtime_str_split",
+                }
+                if expr.member in runtime_map:
+                    obj_val, _ = self.lower_expr(expr.expr, bb)
+                    obj_op = self._to_operand(obj_val, bb)
+                    obj_op.ty = STR
+                    temp = self._new_temp(
+                        STR
+                        if expr.member in ("upper", "lower", "trim", "strip")
+                        else I32
+                    )
+                    bb.stmts.append(StorageLive(temp))
+                    bb.stmts.append(
+                        Assign(
+                            Place(temp),
+                            RuntimeCallRValue(runtime_map[expr.member], [obj_op], STR),
+                        )
+                    )
+                    return UseRValue(PlaceOperand(Place(temp))), None
             return UseRValue(ConstOperand(I32, 0)), None
 
         if isinstance(expr, IndexAccess):

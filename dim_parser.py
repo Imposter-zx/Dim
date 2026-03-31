@@ -160,10 +160,45 @@ class Parser:
             return self._parse_actor()
         if self._check_kw("import"):
             return self._parse_import()
+        if self._check_kw("foreign"):
+            return self._parse_foreign()
+        if self._check_kw("use"):
+            return self._parse_use()
         if self._check(TokenType.NEWLINE):
             self._advance()
             return None
         return self._parse_statement()
+
+    def _parse_foreign(self) -> ForeignDecl:
+        start = self._start_span()
+        self._expect_kw("foreign")
+        name = self._expect(TokenType.IDENTIFIER).value
+        self._expect(TokenType.LPAREN)
+        params = self._parse_params()
+        self._expect(TokenType.RPAREN)
+        return_type = None
+        if self._check(TokenType.ARROW):
+            self._advance()
+            return_type = self._parse_type()
+        return ForeignDecl(name, params, return_type, span=self._end_span(start))
+
+    def _parse_use(self) -> UseStmt:
+        start = self._start_span()
+        self._expect_kw("use")
+        items: List[UseItem] = []
+        while not self._check(TokenType.NEWLINE) and not self._check(TokenType.EOF):
+            path = [self._expect(TokenType.IDENTIFIER).value]
+            while self._check(TokenType.DOT):
+                self._advance()
+                path.append(self._expect(TokenType.IDENTIFIER).value)
+            alias = None
+            if self._check_kw("as"):
+                self._advance()
+                alias = self._expect(TokenType.IDENTIFIER).value
+            items.append(UseItem(path, alias))
+            if not self._match(TokenType.COMMA):
+                break
+        return UseStmt(items, span=self._end_span(start))
 
     # ── Blocks ────────────────────────────────────────────────────────────────
 
@@ -512,12 +547,41 @@ class Parser:
             self._skip_newlines()
             if self._check(TokenType.DEDENT):
                 break
-            if self._check_kw("fn") or self._check_kw("async"):
-                methods.append(self._parse_function())
+            if self._check_kw("fn"):
+                methods.append(self._parse_trait_method())
             else:
-                self._advance()  # error recovery
+                self._advance()
         self._match(TokenType.DEDENT)
         return TraitDef(name, methods, generics, span=self._end_span(start))
+
+    def _parse_trait_method(self) -> FunctionDef:
+        start = self._start_span()
+        self._expect_kw("fn")
+        name = self._expect(TokenType.IDENTIFIER).value
+        generics: List[str] = []
+        if self._check(TokenType.LBRACKET):
+            self._advance()
+            while not self._check(TokenType.RBRACKET):
+                generics.append(self._expect(TokenType.IDENTIFIER).value)
+                if not self._match(TokenType.COMMA):
+                    break
+            self._expect(TokenType.RBRACKET)
+        self._expect(TokenType.LPAREN)
+        params = self._parse_params()
+        self._expect(TokenType.RPAREN)
+        ret = None
+        if self._check(TokenType.ARROW):
+            self._advance()
+            ret = self._parse_type()
+        return FunctionDef(
+            name,
+            params,
+            ret,
+            [],
+            False,
+            span=self._end_span(start),
+            generics=generics,
+        )
 
     def _parse_impl(self) -> ImplBlock:
         start = self._start_span()

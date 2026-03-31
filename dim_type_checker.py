@@ -53,6 +53,7 @@ from dim_types import (
     GenericType,
     StructType,
     EnumType,
+    TraitType,
     FutureType,
     UnknownType,
     RefType,
@@ -187,6 +188,7 @@ class TypeChecker:
         self.env.define(Symbol("max", FunctionType([I32, I32], I32)))
         self._structs: Dict[str, StructDef] = {}
         self._enums: Dict[str, EnumDef] = {}
+        self._traits: Dict[str, TraitDef] = {}
 
     def fresh_var(self) -> TypeVar:
         self._var_counter += 1
@@ -199,7 +201,7 @@ class TypeChecker:
 
     def check_program(self, prog: Program):
         for s in prog.statements:
-            if isinstance(s, (FunctionDef, PromptDef, StructDef, EnumDef)):
+            if isinstance(s, (FunctionDef, PromptDef, StructDef, EnumDef, TraitDef)):
                 self._hoist(s)
         for s in prog.statements:
             self.check_stmt(s)
@@ -208,7 +210,13 @@ class TypeChecker:
         if isinstance(stmt, FunctionDef):
             ps = [self.resolve_type(p.type_ann) for p in stmt.params]
             rt = self.resolve_type(stmt.return_type)
-            ty = FunctionType(ps, rt, stmt.is_async, capabilities=stmt.capabilities)
+            ty = FunctionType(
+                ps,
+                rt,
+                stmt.is_async,
+                capabilities=stmt.capabilities,
+                generics=stmt.generics,
+            )
             self.env.define(Symbol(stmt.name, ty, span=stmt.span))
             stmt.resolved_fn_type = ty
         elif isinstance(stmt, PromptDef):
@@ -224,6 +232,16 @@ class TypeChecker:
             self._enums[stmt.name] = stmt
             variants = {vname: vtypes for vname, vtypes in stmt.variants}
             self.env.define(Symbol(stmt.name, EnumType(stmt.name, variants)))
+        elif isinstance(stmt, TraitDef):
+            self._traits[stmt.name] = stmt
+            method_sigs = {}
+            for m in stmt.methods:
+                ps = [self.resolve_type(p.type_ann) for p in m.params]
+                rt = self.resolve_type(m.return_type)
+                method_sigs[m.name] = FunctionType(
+                    ps, rt, m.is_async, generics=m.generics
+                )
+            self.env.define(Symbol(stmt.name, TraitType(stmt.name, method_sigs)))
 
     def check_stmt(self, stmt: Statement):
         from dim_ast import (

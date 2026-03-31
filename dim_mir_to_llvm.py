@@ -23,6 +23,7 @@ from dim_mir import (
     BinOpRValue,
     UnOpRValue,
     TensorRValue,
+    RuntimeCallRValue,
     Operand,
     Local,
     Place,
@@ -62,20 +63,40 @@ STDLIB_RUNTIME_MAP = {
 }
 
 
+PLATFORM_TRIPLES = {
+    "linux": 'target triple = "x86_64-pc-linux-gnu"',
+    "windows": 'target triple = "x86_64-pc-windows-msvc"',
+    "macos": 'target triple = "x86_64-apple-darwin"',
+    "macosx": 'target triple = "x86_64-apple-macosx"',
+}
+
+PLATFORM_DATALAYOUTS = {
+    "linux": 'target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"',
+    "windows": 'target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"',
+    "macos": 'target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"',
+    "macosx": 'target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"',
+}
+
+
 class LLVMGenerator:
-    def __init__(self):
+    def __init__(self, platform: str = "linux"):
         self._output: List[str] = []
         self._local_names: Dict[int, str] = {}
         self._block_names: Dict[int, str] = {}
         self._const_counter = 0
         self._current_fn: Optional[MIRFunction] = None
         self._stdlib_fn_names: Set[str] = set(STDLIB_RUNTIME_MAP.keys())
+        self.platform = platform
+        self.triple = PLATFORM_TRIPLES.get(platform, PLATFORM_TRIPLES["linux"])
+        self.datalayout = PLATFORM_DATALAYOUTS.get(
+            platform, PLATFORM_DATALAYOUTS["linux"]
+        )
 
     def generate(self, module: MIRModule) -> str:
         self._output = [
             "; Dim-compiled module: " + module.name,
-            'target triple = "x86_64-pc-linux-gnu"',
-            'target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"',
+            self.triple,
+            self.datalayout,
             "",
             "; Runtime declarations",
             "; AI/ML runtime",
@@ -97,6 +118,7 @@ class LLVMGenerator:
             "declare i8* @dim_runtime_str_to_upper(i8*)",
             "declare i8* @dim_runtime_str_to_lower(i8*)",
             "declare i8* @dim_runtime_str_trim(i8*)",
+            "declare { i8*, i64 } @dim_runtime_str_split(i8*)",
             "",
             "; File I/O runtime",
             "declare i8* @dim_runtime_read_file(i8*)",
@@ -363,5 +385,12 @@ class LLVMGenerator:
                 elem_count *= d
             llty = f"<{elem_count} x float>"
             return f"zeroinitializer", llty
+
+        if isinstance(rval, RuntimeCallRValue):
+            args_strs = [self._op_to_llvm(a) for a in rval.args]
+            args_lltys = [self._type_to_llvm(getattr(a, "ty", None)) for a in rval.args]
+            call_sig = ", ".join(f"{t} {v}" for t, v in zip(args_lltys, args_strs))
+            ret_llty = self._type_to_llvm(rval.result_ty)
+            return f"call {ret_llty} @{rval.func_name}({call_sig})", ret_llty
 
         return "undef", "i32"

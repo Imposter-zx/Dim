@@ -266,6 +266,27 @@ class ImportStmt(Statement):
 
 
 @dataclass
+class ForeignDecl(Statement):
+    name: str
+    params: List["Param"]
+    return_type: Optional["Type"]
+    span: Optional[Span] = None
+
+
+@dataclass
+class UseItem(Node):
+    path: List[str]
+    alias: Optional[str] = None
+    span: Optional[Span] = None
+
+
+@dataclass
+class UseStmt(Statement):
+    items: List[UseItem]
+    span: Optional[Span] = None
+
+
+@dataclass
 class StructDef(Statement):
     name: str
     fields: List[Tuple]

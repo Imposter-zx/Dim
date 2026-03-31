@@ -54,12 +54,23 @@ class FunctionType(Type):
     return_type: Type
     is_async: bool = False
     capabilities: List[str] = field(default_factory=list)
+    generics: List[str] = field(default_factory=list)
 
     def __repr__(self):
         p_str = ", ".join(repr(p) for p in self.params)
         async_str = "async " if self.is_async else ""
         cap_str = " caps:" + str(self.capabilities) if self.capabilities else ""
-        return async_str + "fn(" + p_str + ") -> " + repr(self.return_type) + cap_str
+        gen_str = "<" + ", ".join(self.generics) + ">" if self.generics else ""
+        return (
+            async_str
+            + "fn"
+            + gen_str
+            + "("
+            + p_str
+            + ") -> "
+            + repr(self.return_type)
+            + cap_str
+        )
 
 
 @dataclass
@@ -158,6 +169,15 @@ class EnumType(Type):
 
     def __repr__(self):
         return self.name
+
+
+@dataclass
+class TraitType(Type):
+    name: str
+    methods: Dict[str, FunctionType]
+
+    def __repr__(self):
+        return "trait " + self.name
 
 
 @dataclass

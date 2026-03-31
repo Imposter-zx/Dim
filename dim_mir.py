@@ -82,6 +82,13 @@ class TensorRValue(RValue):
     op: str = "const"
 
 
+@dataclass
+class RuntimeCallRValue(RValue):
+    func_name: str
+    args: List[Operand]
+    result_ty: Any
+
+
 class MIRStatement:
     pass
 
