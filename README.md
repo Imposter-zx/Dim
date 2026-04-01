@@ -50,6 +50,30 @@
 
 ---
 
+## Interactive Demo
+
+Try Dim without installing! Open [`dim_language_demo.html`](dim_language_demo.html) in your browser to see:
+
+- Hello World execution
+- REPL with variable bindings
+- AI prompt integration
+- VS Code syntax highlighting
+
+Or run locally:
+
+```bash
+# Run a Dim file
+python dim_cli.py run hello.dim
+
+# Start REPL
+python dim_repl.py
+
+# Type check
+python dim_cli.py check hello.dim
+```
+
+---
+
 ## Syntax Preview
 
 ```dim
