@@ -52,12 +52,10 @@
 
 ## Interactive Demo
 
-Try Dim without installing! Open [`dim_language_demo.html`](dim_language_demo.html) in your browser to see:
+Try Dim without installing!
 
-- Hello World execution
-- REPL with variable bindings
-- AI prompt integration
-- VS Code syntax highlighting
+<!-- Live Demo Embed -->
+<iframe src="dim_language_demo.html" width="100%" height="420" frameborder="0" style="border-radius: 8px; border: 1px solid #333; background: #0f0f1a;"></iframe>
 
 Or run locally:
 
