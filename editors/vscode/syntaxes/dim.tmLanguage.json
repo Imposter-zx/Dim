@@ -1,0 +1,117 @@
+{
+  "name": "Dim",
+  "patterns": [
+    {
+      "include": "#keywords"
+    },
+    {
+      "include": "#strings"
+    },
+    {
+      "include": "#numbers"
+    },
+    {
+      "include": "#comments"
+    },
+    {
+      "include": "#functions"
+    },
+    {
+      "include": "#types"
+    },
+    {
+      "include": "#operators"
+    }
+  ],
+  "repository": {
+    "keywords": {
+      "patterns": [
+        {
+          "name": "keyword.control.dim",
+          "match": "\\b(fn|let|mut|if|else|elif|match|for|while|loop|return|break|continue|import|use|from|as|struct|enum|trait|impl|pub|async|await|try|catch|throw|finally|raise|defer|where|unsafe|extern|foreign|const|static|self|super|true|false|none|yield)\\b"
+        },
+        {
+          "name": "storage.type.dim",
+          "match": "\\b(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f32|f64|bool|str|char|string|num|int|float|list|array|dict|map|set|option|result|future|stream|void|never|type|alias)\\b"
+        }
+      ]
+    },
+    "strings": {
+      "patterns": [
+        {
+          "name": "string.quoted.double.dim",
+          "begin": "\"",
+          "end": "\"",
+          "patterns": [
+            {
+              "name": "constant.character.escape.dim",
+              "match": "\\\\[nrt\\\"\\\\]"
+            }
+          ]
+        },
+        {
+          "name": "string.quoted.single.dim",
+          "begin": "'",
+          "end": "'",
+          "patterns": [
+            {
+              "name": "constant.character.escape.dim",
+              "match": "\\\\[nrt'\\\\]"
+            }
+          ]
+        },
+        {
+          "name": "string.template.dim",
+          "begin": "f\"",
+          "end": "\""
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "name": "constant.numeric.dim",
+          "match": "\\b((0x[0-9a-fA-F]+)|(0b[01]+)|(0o[0-7]+)|([0-9]+\\.?[0-9]*([eE][+-]?[0-9]+)?)|(\\.[0-9]+([eE][+-]?[0-9]+)?))\\b"
+        }
+      ]
+    },
+    "comments": {
+      "patterns": [
+        {
+          "name": "comment.line.dim",
+          "match": "//.*$"
+        },
+        {
+          "name": "comment.block.dim",
+          "begin": "/\\*",
+          "end": "\\*/"
+        }
+      ]
+    },
+    "functions": {
+      "patterns": [
+        {
+          "name": "entity.name.function.dim",
+          "match": "\\b[a-z_][a-zA-Z0-9_]*\\s*(?=\\()"
+        }
+      ]
+    },
+    "types": {
+      "patterns": [
+        {
+          "name": "entity.name.type.dim",
+          "match": "\\b[A-Z][a-zA-Z0-9_]*\\b"
+        }
+      ]
+    },
+    "operators": {
+      "patterns": [
+        {
+          "name": "keyword.operator.dim",
+          "match": "(\\+\\+|\\-\\-|\\+=|\\-=|\\*=|\\/=|%=|\\|\\||&&|==|!=|<=|>=|=>|->|::|\\?\\?|\\?|\\.\\.\\.?"
+        }
+      ]
+    }
+  },
+  "scopeName": "source.dim"
+}

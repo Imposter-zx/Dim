@@ -1,0 +1,30 @@
+{
+  "name": "dim-language",
+  "displayName": "Dim Programming Language",
+  "description": "Syntax highlighting and language support for the Dim programming language",
+  "version": "0.1.0",
+  "publisher": "dimlang",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "dim",
+        "aliases": ["Dim"],
+        "extensions": [".dim"],
+        "configuration": "./language-configuration/dim.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "dim",
+        "scopeName": "source.dim",
+        "path": "./syntaxes/dim.tmLanguage.json"
+      }
+    ]
+  }
+}

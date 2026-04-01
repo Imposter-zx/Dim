@@ -224,6 +224,7 @@ class _LineLexer:
                 "*=": TokenType.STAREQ,
                 "/=": TokenType.SLASHEQ,
                 "%=": TokenType.PERCENTEQ,
+                "::": TokenType.DCOLON,
             }
             if two in OPS2:
                 self._advance()
@@ -254,6 +255,7 @@ class _LineLexer:
                 "|": TokenType.PIPE,
                 "!": TokenType.NOT,
                 "@": TokenType.AT,
+                "?": TokenType.QUESTION,
             }
             if ch in SINGLE:
                 self._advance()
@@ -285,8 +287,16 @@ class _LineLexer:
                         "'": "'",
                     }.get(esc, esc)
                 )
+            elif ch == "{":
+                # String interpolation start - store interpolation marker
+                buf.append(chr(0x01))  # Use control char as marker
             elif ch == quote:
-                return Token(TokenType.STRING, "".join(buf), self._span(start_col))
+                # Check if we have interpolations
+                content = "".join(buf)
+                if chr(0x01) in content:
+                    # Has interpolation - need special handling
+                    return Token(TokenType.STRING, content, self._span(start_col))
+                return Token(TokenType.STRING, content, self._span(start_col))
             else:
                 buf.append(ch)
         self.diag.error("E0002", "Unterminated string literal", self._span(start_col))

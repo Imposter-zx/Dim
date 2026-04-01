@@ -10,6 +10,13 @@
 
 | Feature                     | Status                                         |
 | --------------------------- | ---------------------------------------------- |
+| Tree-Walking Interpreter    | ✅ Production (`dim_interpreter.py`)           |
+| REPL                        | ✅ Production (`dim_repl.py`)                 |
+| AI `prompt` type            | ✅ Production (`dim_ai.py`)                    |
+| String Interpolation        | ✅ Production (`dim_lexer.py`, `dim_interpreter.py`) |
+| `?` Operator (Result)      | ✅ Production (`dim_parser.py`, `dim_interpreter.py`) |
+| Primitive Methods           | ✅ Production (`dim_interpreter.py`)           |
+| VS Code Extension          | ✅ (`editors/vscode/`)                          |
 | Lexer with INDENT/DEDENT    | ✅ Production (`dim_lexer.py`)                 |
 | EBNF Grammar                | ✅ Formal spec (`dim_grammar.ebnf`)            |
 | Span-annotated AST          | ✅ v0.5 (`dim_ast.py`)                         |
@@ -39,7 +46,7 @@
 | Macro System                | ✅ (`dim_macro.py`)                            |
 | Memory Management (RC + GC)| ✅ Reference counting + GC                    |
 | Concurrency (Threads/Future)| ✅ Thread pool + async/futures                |
-| Test Suite                  | ✅ 70 tests (`dim_tests.py`)                   |
+| Test Suite                  | ✅ 79 tests (`dim_tests.py`)                   |
 
 ---
 

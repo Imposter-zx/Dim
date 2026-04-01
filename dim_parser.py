@@ -892,6 +892,22 @@ class Parser:
                             break
                     self._expect(TokenType.RPAREN)
                     expr = Call(expr, args, span=expr.span)
+            elif self._check(TokenType.DCOLON):
+                self._advance()
+                member = self._expect(TokenType.IDENTIFIER).value
+                if self._check(TokenType.LPAREN):
+                    self._advance()
+                    args = []
+                    while not self._check(TokenType.RPAREN) and not self._check(
+                        TokenType.EOF
+                    ):
+                        args.append(self._parse_expression())
+                        if not self._match(TokenType.COMMA):
+                            break
+                    self._expect(TokenType.RPAREN)
+                    expr = EnumVariant(expr.name, member, args, span=expr.span)
+                else:
+                    expr = EnumVariant(expr.name, member, [], span=expr.span)
             elif self._check(TokenType.DOT):
                 self._advance()
                 member = self._expect(TokenType.IDENTIFIER).value
@@ -927,6 +943,9 @@ class Parser:
                 index = self._parse_expression()
                 self._expect(TokenType.RBRACKET)
                 expr = IndexAccess(expr, index, span=expr.span)
+            elif self._check(TokenType.QUESTION):
+                self._advance()
+                expr = UnwrapExpr(expr, span=expr.span)
             else:
                 break
         return expr

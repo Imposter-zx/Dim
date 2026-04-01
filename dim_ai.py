@@ -78,9 +78,19 @@ class ModelAdapter:
         self._client = LocalModelClient(self.config.base_url or "http://localhost:8080")
         return True
 
-    def generate(self, system_prompt: str, user_input: str, **kwargs) -> str:
+    def generate(
+        self,
+        system_prompt: str,
+        user_input: str,
+        images: Optional[List[str]] = None,
+        **kwargs,
+    ) -> str:
         if not self._client:
             return self._stub_response(user_input)
+
+        # Check for image input - most text models don't support images
+        if images and len(images) > 0:
+            return "Error: Cannot read image(s) (this model does not support image input). Inform the user."
 
         temperature = kwargs.get("temperature", self.config.temperature)
         max_tokens = kwargs.get("max_tokens", self.config.max_tokens)
@@ -95,6 +105,113 @@ class ModelAdapter:
             )
         else:
             return self._generate_local(system_prompt, user_input)
+
+    def generate_with_images(
+        self, system_prompt: str, user_input: str, images: List[str]
+    ) -> str:
+        """Generate with image input - requires vision model."""
+
+        if not self._client:
+            return self._stub_response(user_input)
+
+        # Check if model supports vision
+        vision_models = [
+            "gpt-4-vision",
+            "gpt-4-turbo",
+            "gpt-4o",
+            "gpt-4o-mini",
+            "claude-3-opus",
+            "claude-3-sonnet",
+            "claude-3-5-sonnet",
+            "claude-3-haiku",
+        ]
+
+        model_lower = self.config.model.lower()
+        supports_vision = any(vm in model_lower for vm in vision_models)
+
+        if not supports_vision:
+            return "Error: Cannot read image(s) (this model does not support image input). Inform the user."
+
+        # Handle vision models
+        if self.config.provider == ModelProvider.OPENAI:
+            return self._generate_openai_vision(system_prompt, user_input, images)
+        elif self.config.provider == ModelProvider.ANTHROPIC:
+            return self._generate_anthropic_vision(system_prompt, user_input, images)
+
+        return "Error: Vision not supported for this provider"
+
+    def _generate_openai_vision(self, system: str, user: str, images: List[str]) -> str:
+        """Generate with OpenAI vision model."""
+        try:
+            content = [{"type": "text", "text": user}]
+
+            for img_path in images:
+                if img_path.startswith("http"):
+                    content.append(
+                        {"type": "image_url", "image_url": {"url": img_path}}
+                    )
+                else:
+                    import base64
+
+                    with open(img_path, "rb") as f:
+                        img_data = base64.b64encode(f.read()).decode()
+                    content.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {"url": f"data:image/jpeg;base64,{img_data}"},
+                        }
+                    )
+
+            response = self._client.chat.completions.create(
+                model=self.config.model,
+                messages=[
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": content},
+                ],
+                temperature=self.config.temperature,
+                max_tokens=self.config.max_tokens,
+            )
+            return response.choices[0].message.content
+        except Exception as e:
+            return f"Error: {e}"
+
+    def _generate_anthropic_vision(
+        self, system: str, user: str, images: List[str]
+    ) -> str:
+        """Generate with Anthropic vision model."""
+        try:
+            content = [{"type": "text", "text": user}]
+
+            for img_path in images:
+                if img_path.startswith("http"):
+                    content.append(
+                        {"type": "image", "source": {"type": "url", "url": img_path}}
+                    )
+                else:
+                    import base64
+
+                    with open(img_path, "rb") as f:
+                        img_data = base64.b64encode(f.read()).decode()
+                    content.append(
+                        {
+                            "type": "image",
+                            "source": {
+                                "type": "base64",
+                                "media_type": "image/jpeg",
+                                "data": img_data,
+                            },
+                        }
+                    )
+
+            response = self._client.messages.create(
+                model=self.config.model,
+                max_tokens=self.config.max_tokens,
+                system=system,
+                messages=[{"role": "user", "content": content}],
+            )
+            return response.content[0].text
+        except Exception as e:
+            return f"Error: {e}"
 
     def _generate_openai(
         self, system: str, user: str, temp: float, max_tok: int

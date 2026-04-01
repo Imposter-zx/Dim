@@ -1,0 +1,53 @@
+{
+  "comments": {
+    "lineComment": "//",
+    "blockComment": ["/*", "*/"]
+  },
+  "brackets": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"]
+  ],
+  "autoClosingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"]
+  ],
+  "surroundingPairs": [
+    ["{", "}"],
+    ["[", "]"],
+    ["(", ")"],
+    ["\"", "\""],
+    ["'", "'"]
+  ],
+  "indentationRules": {
+    "increaseIndentPattern": "^\\s*(fn|if|else|elif|match|for|while|loop|struct|enum|trait|impl|try|catch|finally|let|mut).*(:|\\{|\\(|\\[)\\s*$",
+    "decreaseIndentPattern": "^\\s*(\\}|\\]|\\)|\\.\\.)"
+  },
+  "wordPattern": "[a-zA-Z_][a-zA-Z0-9_]*",
+  "tokenizer": {
+    "root": [
+      ["//.*$", "comment"],
+      ["/\\*", "comment", "@comment"],
+      ["\\b(fn|let|mut|if|else|elif|match|for|while|loop|return|break|continue|import|use|as|struct|enum|trait|impl|pub|async|await|try|catch|throw|finally|raise|defer|where|unsafe|extern|foreign|const|static|self|super|true|false|none)\\b", "keyword"],
+      ["\\b(i8|i16|i32|i64|i128|u8|u16|u32|u64|u128|f32|f64|bool|str|char|string|num|int|float|list|array|dict|map|set|option|result|future|stream|void|never|type|alias)\\b", "type"],
+      ["\\b[A-Z][a-zA-Z0-9_]*\\b", "type.identifier"],
+      ["[a-z_][a-zA-Z0-9_]*(?=\\()", "function"],
+      ["\"([^\"\\\\]|\\\\.)*\"", "string"],
+      ["'([^'\\\\]|\\\\.)*'", "string"],
+      ["0x[0-9a-fA-F]+", "number.hex"],
+      ["0b[01]+", "number.binary"],
+      ["0o[0-7]+", "number.octal"],
+      ["[0-9]+\\.?[0-9]*([eE][+-]?[0-9]+)?", "number"],
+      ["[+\\-*/%=<>!&|^~?:]+", "operator"]
+    ],
+    "comment": [
+      ["[^/*]+", "comment"],
+      ["/\\*", "comment", "@push"],
+      ["\\*/", "comment", "@pop"],
+      ["[/*]", "comment"]
+    ]
+  }
+}

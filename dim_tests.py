@@ -1166,6 +1166,114 @@ fn main():
     assert_no_errors(diag)
 
 
+# ── Interpreter Tests ───────────────────────────────────────────────────────────
+
+
+@test("Interpreter: evaluates arithmetic", "interpreter")
+def test_interp_arithmetic():
+    from dim_interpreter import run_interpreter
+
+    result = run_interpreter("let x = 5 + 3")
+    assert result is not None
+
+
+@test("Interpreter: evaluates string methods", "interpreter")
+def test_interp_string_methods():
+    from dim_interpreter import run_interpreter
+
+    result = run_interpreter('let s = "hello".upper()')
+    assert result is not None
+
+
+@test("Interpreter: evaluates list operations", "interpreter")
+def test_interp_list_ops():
+    from dim_interpreter import run_interpreter
+
+    result = run_interpreter("let nums = [1, 2, 3]")
+
+
+@test("Interpreter: handles function calls", "interpreter")
+def test_interp_fn_call():
+    from dim_interpreter import run_interpreter
+
+    code = """
+fn add(a, b):
+    return a + b
+
+fn main():
+    return add(5, 3)
+"""
+    result = run_interpreter(code)
+    assert result is not None
+
+
+@test("Interpreter: handles method calls", "interpreter")
+def test_interp_method_call():
+    from dim_interpreter import run_interpreter
+
+    result = run_interpreter('let s = "hello".upper()')
+    assert result is not None
+
+
+@test("Interpreter: handles string interpolation", "interpreter")
+def test_interp_string_interpolation():
+    from dim_interpreter import run_interpreter
+
+    code = """
+fn main():
+    let name = "Alice"
+    let msg = "Hello {name}!"
+    return msg
+"""
+    result = run_interpreter(code)
+    assert result is not None
+
+
+@test("Interpreter: handles ? unwrap operator", "interpreter")
+def test_interp_unwrap():
+    from dim_interpreter import run_interpreter
+
+    code = """
+enum Result:
+    Ok(value)
+    Err(error)
+
+fn main():
+    let r = Result::Ok(42)
+    return r?
+"""
+    result = run_interpreter(code)
+    assert result is not None
+
+
+@test("Interpreter: handles list methods", "interpreter")
+def test_interp_list_methods():
+    from dim_interpreter import run_interpreter
+
+    code = """
+fn main():
+    let nums = [1, 2, 3]
+    return nums.len()
+"""
+    result = run_interpreter(code)
+    assert result is not None
+
+
+@test("Interpreter: handles if-else", "interpreter")
+def test_interp_if_else():
+    from dim_interpreter import run_interpreter
+
+    code = """
+fn main():
+    if 5 > 3:
+        return 1
+    else:
+        return 0
+"""
+    result = run_interpreter(code)
+    assert result is not None
+
+
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":

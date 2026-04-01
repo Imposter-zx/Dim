@@ -85,6 +85,12 @@ class AwaitExpr(Expression):
 
 
 @dataclass
+class UnwrapExpr(Expression):
+    expr: Expression
+    span: Optional[Span] = None
+
+
+@dataclass
 class ListLiteral(Expression):
     elements: List[Expression]
     span: Optional[Span] = None
@@ -93,6 +99,12 @@ class ListLiteral(Expression):
 @dataclass
 class TupleLiteral(Expression):
     elements: List[Expression]
+    span: Optional[Span] = None
+
+
+@dataclass
+class InterpolatedString(Expression):
+    parts: List[Expression]
     span: Optional[Span] = None
 
 
@@ -128,7 +140,7 @@ class StructConstruct(Expression):
 class EnumVariant(Expression):
     enum_name: str
     variant_name: str
-    args: List[Tuple] = field(default_factory=list)
+    args: List[Expression] = field(default_factory=list)
     span: Optional[Span] = None
 
 

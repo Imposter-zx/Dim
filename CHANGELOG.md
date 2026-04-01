@@ -4,6 +4,41 @@ All notable changes to the Dim programming language compiler will be documented 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.0] - 2026-04-01
+
+### Added
+- **Tree-Walking Interpreter**: `dim_interpreter.py`
+  - Direct execution without compilation
+  - Supports all Dim features: functions, structs, enums, traits, etc.
+- **Working REPL**: `dim_repl.py`
+  - Interactive mode using interpreter
+  - `--interpreter` flag for CLI
+- **AI `prompt` Integration**: `dim_ai.py`
+  - OpenAI and Anthropic adapters
+  - Environment variables `DIM_AI_PROVIDER`, `DIM_AI_KEY`
+  - Real LLM calls via PromptValue
+- **String Interpolation**: `"Hello {name}!"` syntax
+  - Lexer marks interpolated strings with control char
+  - Interpreter evaluates variable references
+- **`?` Operator for Result Unwrapping**
+  - New `QUESTION` token in `dim_token.py`
+  - New `UnwrapExpr` AST node
+  - Parser handles `expr?` syntax
+  - Interpreter unwraps Result::Ok and raises on Err
+- **Primitive Methods**
+  - String methods: `upper()`, `lower()`, `trim()`, `contains()`, `split()`, etc.
+  - Number methods: `abs()`, `floor()`, `ceil()`, `round()`, `sqrt()`
+  - List methods: `push()`, `pop()`, `len()`, `contains()`, `reverse()`, etc.
+- **VS Code Extension**: `editors/vscode/`
+  - `package.json`: Extension manifest
+  - `syntaxes/dim.tmLanguage.json`: Syntax highlighting
+  - `language-configuration/dim.json`: Language configuration
+
+### Changed
+- Updated test suite: 79 tests now passing
+- Added `DCOLON` (`::`) token for enum namespace paths
+- Fixed enum variant attribute: `args` instead of `arguments`
+
 ## [1.0.0] - 2026-03-31
 
 ### Added

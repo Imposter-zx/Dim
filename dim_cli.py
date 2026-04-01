@@ -219,6 +219,20 @@ def cmd_pkg(args):
 
 def cmd_run(args):
     """Build and run a .dim file."""
+    use_interpreter = getattr(args, "interpreter", False)
+
+    if use_interpreter:
+        # Use the tree-walking interpreter
+        from dim_interpreter import run_file
+
+        try:
+            result = run_file(args.file)
+            sys.exit(0)
+        except Exception as e:
+            print(f"Runtime error: {e}")
+            sys.exit(1)
+
+    # Use the LLVM build pipeline
     from dim_build import BuildSystem
 
     project_path = os.path.dirname(os.path.abspath(args.file)) or os.getcwd()
@@ -359,6 +373,12 @@ def main():
     p_run = sub.add_parser("run", help="Build and run a .dim file")
     p_run.add_argument("file", nargs="?", default=None, help=".dim file to run")
     p_run.add_argument("args", nargs="*", default=[], help="Arguments to pass")
+    p_run.add_argument(
+        "--interpreter",
+        "-i",
+        action="store_true",
+        help="Use tree-walking interpreter (no compilation)",
+    )
     p_run.set_defaults(func=cmd_run)
 
     # new

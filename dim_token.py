@@ -57,6 +57,8 @@ class TokenType(Enum):
     STAREQ = auto()  # *=
     SLASHEQ = auto()  # /=
     PERCENTEQ = auto()  # %=
+    QUESTION = auto()  # ? (Result unwrap)
+    DCOLON = auto()  # :: (namespace/enum path)
 
     # Indentation (injected by lexer)
     INDENT = auto()
