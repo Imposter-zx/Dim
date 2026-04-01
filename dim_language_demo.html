@@ -1,0 +1,212 @@
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-mono); }
+.demo-wrap { padding: 1rem 0; }
+.scene-tabs { display: flex; gap: 8px; margin-bottom: 1rem; flex-wrap: wrap; }
+.tab { padding: 6px 14px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); font-size: 13px; cursor: pointer; background: var(--color-background-primary); color: var(--color-text-secondary); font-family: var(--font-sans); transition: all 0.15s; }
+.tab.active { background: #1a1a2e; color: #e0e0ff; border-color: #4a4a8a; }
+.terminal { background: #0f0f1a; border-radius: var(--border-radius-lg); border: 0.5px solid #2a2a4a; overflow: hidden; min-height: 320px; }
+.term-bar { background: #1a1a2e; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot-r { background: #ff5f57; }
+.dot-y { background: #febc2e; }
+.dot-g { background: #28c840; }
+.term-title { font-size: 12px; color: #6060a0; font-family: var(--font-sans); margin-left: 8px; }
+.term-body { padding: 16px; font-size: 13px; line-height: 1.7; min-height: 280px; }
+.line { display: flex; gap: 0; white-space: pre-wrap; word-break: break-all; }
+.prompt-sym { color: #6060a0; }
+.cmd { color: #e0e0ff; }
+.out { color: #7ec8a0; }
+.out-ai { color: #c8a07e; }
+.out-err { color: #ff7070; }
+.comment { color: #4a5a7a; }
+.kw { color: #bb86fc; }
+.fn-name { color: #7ec8e0; }
+.str { color: #c8e07e; }
+.type { color: #e0a07e; }
+.deco { color: #e0c07e; }
+.num { color: #a0c8ff; }
+.cursor { display: inline-block; width: 8px; height: 14px; background: #7070cc; animation: blink 1s infinite; vertical-align: middle; margin-left: 1px; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+.run-btn { margin-top: 1rem; padding: 8px 20px; background: #1a1a2e; color: #bb86fc; border: 0.5px solid #4a4a8a; border-radius: var(--border-radius-md); cursor: pointer; font-size: 13px; font-family: var(--font-sans); }
+.run-btn:hover { background: #2a2a4e; }
+.badge { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 99px; font-family: var(--font-sans); margin-left: 8px; }
+.badge-green { background: #1a3a2a; color: #7ec8a0; }
+.badge-blue { background: #1a2a3a; color: #7ec8ff; }
+.scene { display: none; }
+.scene.active { display: block; }
+.speed-row { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+.speed-row label { font-size: 12px; color: var(--color-text-secondary); font-family: var(--font-sans); }
+</style>
+
+<div class="demo-wrap">
+  <div class="scene-tabs">
+    <button class="tab active" onclick="showScene(0)">1 — hello world</button>
+    <button class="tab" onclick="showScene(1)">2 — repl</button>
+    <button class="tab" onclick="showScene(2)">3 — AI prompt</button>
+    <button class="tab" onclick="showScene(3)">4 — VS Code</button>
+  </div>
+
+  <div class="scene active" id="scene-0">
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="term-title">dim — hello.dim</span>
+      </div>
+      <div class="term-body" id="term-0"></div>
+    </div>
+    <button class="run-btn" onclick="runScene(0)">▶ run demo</button>
+  </div>
+
+  <div class="scene" id="scene-1">
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="term-title">dim — repl</span>
+      </div>
+      <div class="term-body" id="term-1"></div>
+    </div>
+    <button class="run-btn" onclick="runScene(1)">▶ run demo</button>
+  </div>
+
+  <div class="scene" id="scene-2">
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="term-title">dim — classify.dim</span>
+      </div>
+      <div class="term-body" id="term-2"></div>
+    </div>
+    <button class="run-btn" onclick="runScene(2)">▶ run demo</button>
+  </div>
+
+  <div class="scene" id="scene-3">
+    <div class="terminal">
+      <div class="term-bar">
+        <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+        <span class="term-title">dim — demo.dim (VS Code)</span>
+      </div>
+      <div class="term-body" id="term-3"></div>
+    </div>
+    <button class="run-btn" onclick="runScene(3)">▶ run demo</button>
+  </div>
+</div>
+
+<script>
+const scenes = [
+  [
+    {t:400, html:`<div class="line"><span class="comment"># hello.dim</span></div>`},
+    {t:200, html:`<div class="line"><span class="kw">fn</span> <span class="fn-name">main</span>():</div>`},
+    {t:200, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn-name">println</span>(<span class="str">"Hello, World!"</span>)</div>`},
+    {t:600, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="prompt-sym">$ </span><span class="cmd">python dim_cli.py run hello.dim</span></div>`},
+    {t:700, html:`<div class="line"><span class="out">Hello, World!</span> <span class="badge badge-green">✓ ran in 12ms</span></div>`},
+    {t:400, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="prompt-sym">$ </span><span class="cmd">python dim_cli.py check hello.dim</span></div>`},
+    {t:500, html:`<div class="line"><span class="out">[PASS] Type checking passed.</span></div>`},
+  ],
+  [
+    {t:300, html:`<div class="line"><span class="prompt-sym">$ </span><span class="cmd">python dim_repl.py</span></div>`},
+    {t:400, html:`<div class="line"><span class="out">Dim REPL v1.1.0 — type :help for commands</span></div>`},
+    {t:500, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">let x = 10</span></div>`},
+    {t:300, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">let y = 20</span></div>`},
+    {t:300, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">x + y</span></div>`},
+    {t:250, html:`<div class="line"><span class="num">30</span></div>`},
+    {t:400, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">fn double(n: i32) -> i32:</span></div>`},
+    {t:200, html:`<div class="line"><span class="prompt-sym">...&gt; </span><span class="cmd">&nbsp;&nbsp;&nbsp;&nbsp;return n * 2</span></div>`},
+    {t:300, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">double(x)</span></div>`},
+    {t:250, html:`<div class="line"><span class="num">20</span></div>`},
+    {t:400, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">:type x</span></div>`},
+    {t:250, html:`<div class="line"><span class="out-ai">x : i32</span></div>`},
+    {t:400, html:`<div class="line"><span class="prompt-sym">dim&gt; </span><span class="cmd">:env</span></div>`},
+    {t:250, html:`<div class="line"><span class="out-ai">x = 10 : i32</span></div>`},
+    {t:100, html:`<div class="line"><span class="out-ai">y = 20 : i32</span></div>`},
+    {t:100, html:`<div class="line"><span class="out-ai">double = fn(i32) -> i32</span></div>`},
+  ],
+  [
+    {t:300, html:`<div class="line"><span class="comment"># classify.dim</span></div>`},
+    {t:150, html:`<div class="line"><span class="kw">prompt</span> <span class="fn-name">Classify</span>:</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">role</span> <span class="type">system</span>: <span class="str">"You are a text classifier. Reply: positive, negative, or neutral."</span></div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">role</span> <span class="type">user</span>: <span class="str">"Classify: {text}"</span></div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">output</span>: <span class="type">str</span></div>`},
+    {t:200, html:`<div class="line">&nbsp;</div>`},
+    {t:150, html:`<div class="line"><span class="kw">fn</span> <span class="fn-name">main</span>():</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">let</span> result = <span class="fn-name">Classify</span>(text: <span class="str">"I absolutely love this language!"</span>)</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn-name">println</span>(<span class="str">"Sentiment: {result}"</span>)</div>`},
+    {t:600, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="prompt-sym">$ </span><span class="cmd">python dim_cli.py run classify.dim</span></div>`},
+    {t:1200,html:`<div class="line"><span class="out-ai">calling AI model (anthropic/claude)...</span></div>`},
+    {t:800, html:`<div class="line"><span class="out">Sentiment: positive</span> <span class="badge badge-blue">✓ type-checked</span></div>`},
+    {t:600, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="comment"># try a negative example</span></div>`},
+    {t:0,   html:`<div class="line"><span class="prompt-sym">$ </span><span class="cmd">python dim_cli.py run classify.dim</span></div>`},
+    {t:1100,html:`<div class="line"><span class="out-ai">calling AI model (anthropic/claude)...</span></div>`},
+    {t:800, html:`<div class="line"><span class="out">Sentiment: negative</span> <span class="badge badge-blue">✓ type-checked</span></div>`},
+  ],
+  [
+    {t:300, html:`<div class="line"><span class="comment"># demo.dim — VS Code view</span></div>`},
+    {t:200, html:`<div class="line">&nbsp;</div>`},
+    {t:150, html:`<div class="line"><span class="kw">prompt</span> <span class="fn-name">Summarize</span>:</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">role</span> <span class="type">system</span>: <span class="str">"You are a summarizer."</span></div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">role</span> <span class="type">user</span>: <span class="str">"Summarize: {text}"</span></div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">output</span>: <span class="type">str</span></div>`},
+    {t:200, html:`<div class="line">&nbsp;</div>`},
+    {t:150, html:`<div class="line"><span class="kw">struct</span> <span class="type">Article</span>:</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;title: <span class="type">str</span></div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;body: <span class="type">str</span></div>`},
+    {t:200, html:`<div class="line">&nbsp;</div>`},
+    {t:150, html:`<div class="line"><span class="deco">@tool</span>(permissions=[<span class="type">NetRead</span>])</div>`},
+    {t:150, html:`<div class="line"><span class="kw">fn</span> <span class="fn-name">fetch</span>(url: <span class="type">str</span>) -> <span class="type">str</span>:</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> <span class="str">"article content"</span></div>`},
+    {t:200, html:`<div class="line">&nbsp;</div>`},
+    {t:150, html:`<div class="line"><span class="kw">fn</span> <span class="fn-name">main</span>():</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">let</span> article = <span class="type">Article</span>(</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;title: <span class="str">"Breaking News"</span>,</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;body: <span class="fn-name">fetch</span>(<span class="str">"https://example.com"</span>)</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;)</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">let</span> summary = <span class="fn-name">Summarize</span>(text: article.body)</div>`},
+    {t:150, html:`<div class="line">&nbsp;&nbsp;&nbsp;&nbsp;<span class="fn-name">println</span>(<span class="str">"Summary: {summary}"</span>)</div>`},
+    {t:600, html:`<div class="line">&nbsp;</div>`},
+    {t:0,   html:`<div class="line"><span class="out-ai">✓ syntax highlighting: keywords, types, strings, decorators, prompt/role</span></div>`},
+    {t:200, html:`<div class="line"><span class="out-ai">✓ LSP: hover, go-to-definition, completions active</span></div>`},
+    {t:200, html:`<div class="line"><span class="out">✓ VS Code extension installed from editors/vscode/</span></div>`},
+  ]
+];
+
+let timers = [];
+let currentScene = 0;
+
+function clearTimers() {
+  timers.forEach(t => clearTimeout(t));
+  timers = [];
+}
+
+function showScene(i) {
+  clearTimers();
+  currentScene = i;
+  document.querySelectorAll('.scene').forEach((s,j) => s.classList.toggle('active', j===i));
+  document.querySelectorAll('.tab').forEach((t,j) => t.classList.toggle('active', j===i));
+  document.getElementById('term-'+i).innerHTML = '';
+}
+
+function runScene(i) {
+  clearTimers();
+  const el = document.getElementById('term-'+i);
+  el.innerHTML = '';
+  let delay = 0;
+  scenes[i].forEach((step, idx) => {
+    delay += step.t;
+    const t = setTimeout(() => {
+      el.innerHTML += step.html;
+      if (idx === scenes[i].length - 1) {
+        el.innerHTML += `<div class="line"><span class="cursor"></span></div>`;
+      }
+      el.scrollTop = el.scrollHeight;
+    }, delay);
+    timers.push(t);
+  });
+}
+
+runScene(0);
+</script>
