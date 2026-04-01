@@ -52,10 +52,12 @@
 
 ## Interactive Demo
 
-Try Dim without installing!
+Try Dim without installing! Download and open [`dim_language_demo.html`](dim_language_demo.html) in your browser:
 
-<!-- Live Demo Embed -->
-<iframe src="dim_language_demo.html" width="100%" height="420" frameborder="0" style="border-radius: 8px; border: 1px solid #333; background: #0f0f1a;"></iframe>
+- **Hello World** - Run Dim programs
+- **REPL** - Interactive console
+- **AI Prompt** - Real AI integration
+- **VS Code** - Syntax highlighting demo
 
 Or run locally:
 
